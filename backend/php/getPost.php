@@ -4,9 +4,9 @@
  * API para obtener un post específico con todas sus imágenes y videos
  */
 
-require_once('../includes/config.inc.php');
-require_once('../clases/Posts.php');
-require_once('../clases/ResponseHelper.php');
+require_once('../../includes/config.inc.php');
+require_once('../../clases/Posts.php');
+require_once('../../clases/ResponseHelper.php');
 
 // Verificar que sea GET
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {

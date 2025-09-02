@@ -35,10 +35,7 @@ function loadEnv($path)
 }
 
 // Detectar el directorio raíz del proyecto
-$rootPath = $_SESSION['lang'] === 'es' ? __DIR__ . '/../' : __DIR__ . '/../../';
-if (isset($_SERVER['SCRIPT_FILENAME']) && strpos($_SERVER['SCRIPT_FILENAME'], '/backend/') !== false) {
-  $rootPath = __DIR__ . '/../../';
-}
+$rootPath = __DIR__ . '/../';  // Por defecto: desde includes/ al directorio raíz
 
 // Cargar archivo .env
 try {

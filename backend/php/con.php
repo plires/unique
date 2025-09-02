@@ -5,8 +5,8 @@
  * Use la clase Database en su lugar
  */
 
-require_once('../includes/config.inc.php');
-require_once('../clases/Database.php');
+require_once('../../includes/config.inc.php');
+require_once('../../clases/Database.php');
 
 // Para compatibilidad con código existente, crear la conexión PDO directa
 $db = Database::getInstance()->getConnection();

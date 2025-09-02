@@ -4,9 +4,9 @@
  * API para crear y editar jobs
  */
 
-require_once('../includes/config.inc.php');
-require_once('../clases/Jobs.php');
-require_once('../clases/ResponseHelper.php');
+require_once('../../includes/config.inc.php');
+require_once('../../clases/Jobs.php');
+require_once('../../clases/ResponseHelper.php');
 
 // Verificar que sea POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

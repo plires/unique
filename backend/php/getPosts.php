@@ -4,7 +4,7 @@
  * API para obtener todos los posts con información de medios
  */
 
-require_once('../includes/config.inc.php');
+require_once('../../includes/config.inc.php');
 require_once('../clases/Posts.php');
 require_once('../clases/ResponseHelper.php');
 
