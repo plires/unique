@@ -29,5 +29,3 @@ FRONTEND_URL: window.FRONTEND_URL,
 MAX_FILE_SIZE: <?php echo MAX_FILE_SIZE; ?>,
 UPLOAD_PATH: "<?php echo UPLOAD_PATH; ?>",
 };
-
-console.log('Configuración cargada:', window.APP_CONFIG);

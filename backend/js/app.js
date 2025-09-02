@@ -145,12 +145,10 @@ let app = new Vue({
       try {
         Utils.toggleLoader(true);
 
-        await Utils.makeRequest(
+        // Usar axios directamente en lugar de Utils.makeRequest
+        const response = await axios.post(
           APP_CONFIG.API_BASE_URL + "php/add_edit_job.php",
-          {
-            method: "POST",
-            data: formData,
-          }
+          formData
         );
 
         $("#modalAddJob").modal("hide");
