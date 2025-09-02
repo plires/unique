@@ -109,12 +109,10 @@ let app = new Vue({
     async getJobs() {
       try {
         Utils.toggleLoader(true);
-        const data = await Utils.makeRequest(
+        const response = await Utils.makeRequest(
           APP_CONFIG.API_BASE_URL + "php/getJobs.php"
         );
-
-        // Ordenar por ID descendente
-        this.jobs = data.sort((a, b) => b.id - a.id);
+        this.jobs = response.data.sort((a, b) => b.id - a.id);
       } catch (error) {
         Utils.showError("Error al cargar trabajos: " + error.message);
       } finally {

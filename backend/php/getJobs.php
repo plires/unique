@@ -12,7 +12,7 @@ try {
   $jobsModel = new Jobs();
   $jobs = $jobsModel->getAll('id', 'DESC');
 
-  ResponseHelper::json($jobs);
+  ResponseHelper::success($jobs, 'Trabajos obtenidos exitosamente');
 } catch (Exception $e) {
   error_log("Error en getJobs.php: " . $e->getMessage());
   ResponseHelper::serverError('Error al obtener los trabajos');
