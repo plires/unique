@@ -75,6 +75,11 @@ define('NAME_SENDER_SHOW', env('NAME_SENDER_SHOW', 'Unique Talent Solutions'));
 define('UPLOAD_PATH', env('UPLOAD_PATH', 'uploads/cv/'));
 define('MAX_FILE_SIZE', env('MAX_FILE_SIZE', 5242880)); // 5MB por defecto
 
+// === CONFIGURACIÓN ESPECÍFICA PARA IMÁGENES DE POSTS ===
+define('UPLOAD_PATH_IMAGES', env('UPLOAD_PATH_IMAGES', 'uploads/images/'));
+define('MAX_IMAGE_SIZE', env('MAX_IMAGE_SIZE', 10485760)); // 10MB por defecto
+define('ALLOWED_IMAGE_TYPES', env('ALLOWED_IMAGE_TYPES', 'jpg,jpeg,png,gif,webp'));
+
 // === CONFIGURACIÓN DE TIMEZONE ===
 date_default_timezone_set('America/Argentina/Buenos_Aires');
 
@@ -86,6 +91,11 @@ define('RECAPTCHA_SECRET_KEY', env('RECAPTCHA_SECRET_KEY'));
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
+
+// === CONFIGURACIÓN ESPECÍFICA PARA VIDEOS DE POSTS ===
+define('UPLOAD_PATH_VIDEOS', env('UPLOAD_PATH_VIDEOS', 'uploads/videos/'));
+define('MAX_VIDEO_SIZE', env('MAX_VIDEO_SIZE', 104857600)); // 100MB por defecto
+define('ALLOWED_VIDEO_TYPES', env('ALLOWED_VIDEO_TYPES', 'mp4,avi,mov,wmv,flv,webm'));
 
 // === MANEJO DE ERRORES ===
 define('APP_DEBUG', env('APP_DEBUG', false));

@@ -5,8 +5,8 @@
  */
 
 require_once('../../includes/config.inc.php');
-require_once('../clases/Posts.php');
-require_once('../clases/ResponseHelper.php');
+require_once('../../clases/Posts.php');
+require_once('../../clases/ResponseHelper.php');
 
 try {
   $postsModel = new Posts();

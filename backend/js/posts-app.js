@@ -7,6 +7,11 @@ let postsApp = new Vue({
     searchQuery: "",
     messages: [],
 
+    // Agregar propiedades para compatibilidad con modalUser
+    user: {},
+    errorsUser: [],
+    changePass: false,
+
     // Modal de Post
     isEditing: false,
     modalTitle: "Crear Post",
@@ -54,12 +59,47 @@ let postsApp = new Vue({
 
   mounted() {
     this.loadPosts();
+    this.getUser();
     this.initializeQuillEditor();
   },
 
   methods: {
-    // === CARGA DE DATOS ===
+    // === USUARIO ===
+    async getUser() {
+      try {
+        const response = await axios.get(
+          window.APP_CONFIG.API_BASE_URL + "php/getUser.php"
+        );
+        this.user = response.data;
+      } catch (error) {
+        console.error("Error al cargar usuario:", error);
+      }
+    },
 
+    submitFormUser(e) {
+      e.preventDefault();
+      // Implementar lógica de actualización de usuario
+      console.log("Actualizar usuario:", this.user);
+    },
+
+    checkFormUser() {
+      this.errorsUser = [];
+
+      if (!this.user.user) {
+        this.errorsUser.push("El nombre de usuario es obligatorio.");
+      }
+      if (!this.user.email) {
+        this.errorsUser.push("El email es obligatorio.");
+      }
+
+      return this.errorsUser.length === 0;
+    },
+
+    rememberPassword() {
+      this.changePass = !this.changePass;
+    },
+
+    // === CARGA DE DATOS ===
     async loadPosts() {
       try {
         this.showLoader();
