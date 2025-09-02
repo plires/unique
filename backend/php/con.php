@@ -1,15 +1,17 @@
 <?php
+// TODO: revisar este archivo para ver si se puede eliminar y usar directamente Database
+/**
+ * DEPRECATED: Este archivo se mantiene por compatibilidad
+ * Use la clase Database en su lugar
+ */
 
-include('config.inc.php');
+require_once('../includes/config.inc.php');
+require_once('../clases/Database.php');
 
+// Para compatibilidad con código existente, crear la conexión PDO directa
+$db = Database::getInstance()->getConnection();
+
+// Mantener variables de compatibilidad
 $dsn = DSN;
 $usuario = DB_USER;
 $password = DB_PASS;
-
-try {
-  $db = new PDO($dsn, $usuario, $password);
-} catch (Exception $e) {
-  echo 'No se pudo conectar a la base de datos, intente mas tarde...';
-}
-
-?>

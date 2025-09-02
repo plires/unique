@@ -1,5 +1,62 @@
-let root = "http://unique.test/backend/";
+// === CONFIGURACIÓN GLOBAL ===
+const APP_CONFIG = {
+  // Esta URL será reemplazada dinámicamente por PHP
+  API_BASE_URL: window.API_BASE_URL || "http://unique.test/backend/",
+};
 
+// === UTILIDADES ===
+const Utils = {
+  // Mostrar mensaje de éxito
+  showSuccess(message) {
+    if (typeof msgSuccess === "function") {
+      msgSuccess(message);
+    } else {
+      alert(message);
+    }
+  },
+
+  // Mostrar mensaje de error
+  showError(message) {
+    alert(message);
+  },
+
+  // Mostrar/ocultar loader
+  toggleLoader(show = true) {
+    if (show && typeof loader === "function") {
+      loader();
+    } else {
+      $("#loader").fadeOut(500);
+    }
+  },
+
+  // Hacer petición AJAX con manejo de errores estandarizado
+  async makeRequest(url, options = {}) {
+    const defaultOptions = {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    };
+
+    const config = { ...defaultOptions, ...options };
+
+    try {
+      const response = await axios(url, config);
+      return response.data;
+    } catch (error) {
+      console.error("Error en petición:", error);
+
+      if (error.response && error.response.data) {
+        const errorData = error.response.data;
+        throw new Error(errorData.message || "Error en el servidor");
+      } else {
+        throw new Error("Error de conexión");
+      }
+    }
+  },
+};
+
+// === APLICACIÓN VUE ===
 let app = new Vue({
   el: "#app",
   data: {
@@ -22,17 +79,227 @@ let app = new Vue({
     messages: [],
     changePass: false,
   },
+
+  computed: {
+    // Filtrar trabajos según búsqueda
+    searchJob() {
+      if (!this.q) {
+        return this.jobs;
+      }
+
+      const query = this.q.toLowerCase();
+      return this.jobs.filter(
+        (job) =>
+          job.position.toLowerCase().includes(query) ||
+          job.location.toLowerCase().includes(query) ||
+          job.job_function.toLowerCase().includes(query) ||
+          job.employment_type.toLowerCase().includes(query)
+      );
+    },
+  },
+
   mounted() {
     this.getJobs();
     this.getUser();
   },
+
   methods: {
+    // === GESTIÓN DE TRABAJOS ===
+
+    async getJobs() {
+      try {
+        Utils.toggleLoader(true);
+        const data = await Utils.makeRequest(
+          APP_CONFIG.API_BASE_URL + "php/getJobs.php"
+        );
+
+        // Ordenar por ID descendente
+        this.jobs = data.sort((a, b) => b.id - a.id);
+      } catch (error) {
+        Utils.showError("Error al cargar trabajos: " + error.message);
+      } finally {
+        Utils.toggleLoader(false);
+      }
+    },
+
+    async submitFormJob(e) {
+      e.preventDefault();
+
+      if (!this.validateJobForm()) {
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("position", this.position);
+      formData.append("location", this.location);
+      formData.append("job_function", this.job_function);
+      formData.append("employment_type", this.employment_type);
+      formData.append("description", this.description);
+      formData.append("link", this.link);
+
+      if (this.jobEdit) {
+        formData.append("edit", "true");
+        formData.append("id", this.idJobToEdit);
+      }
+
+      try {
+        Utils.toggleLoader(true);
+
+        await Utils.makeRequest(
+          APP_CONFIG.API_BASE_URL + "php/add_edit_job.php",
+          {
+            method: "POST",
+            data: formData,
+          }
+        );
+
+        $("#modalAddJob").modal("hide");
+        this.resetForm();
+
+        const message = this.jobEdit
+          ? "Trabajo editado exitosamente"
+          : "Trabajo agregado exitosamente";
+        Utils.showSuccess(message);
+
+        await this.getJobs();
+      } catch (error) {
+        Utils.showError("Error al guardar trabajo: " + error.message);
+      } finally {
+        Utils.toggleLoader(false);
+      }
+    },
+
+    validateJobForm() {
+      this.errors = [];
+
+      if (!this.position.trim()) {
+        this.errors.push("La posición es obligatoria");
+      }
+      if (!this.location.trim()) {
+        this.errors.push("La ubicación es obligatoria");
+      }
+      if (!this.job_function.trim()) {
+        this.errors.push("La función laboral es obligatoria");
+      }
+      if (!this.employment_type.trim()) {
+        this.errors.push("El tipo de empleo es obligatorio");
+      }
+
+      return this.errors.length === 0;
+    },
+
+    editJob(id) {
+      const job = this.jobs.find((j) => j.id == id);
+      if (!job) {
+        Utils.showError("Trabajo no encontrado");
+        return;
+      }
+
+      this.jobEdit = true;
+      this.idJobToEdit = id;
+      this.position = job.position;
+      this.location = job.location;
+      this.job_function = job.job_function;
+      this.employment_type = job.employment_type;
+      this.description = job.description;
+      this.link = job.link || "";
+      this.titleForm = "Editar Trabajo";
+
+      $("#modalAddJob").modal("show");
+    },
+
+    resetForm() {
+      this.jobEdit = false;
+      this.idJobToEdit = false;
+      this.position = "";
+      this.location = "";
+      this.job_function = "";
+      this.employment_type = "";
+      this.description = "";
+      this.link = "";
+      this.errors = [];
+      this.titleForm = "Agregar Trabajo";
+    },
+
+    setIdJobToDelete(id) {
+      this.idJobToDelete = id;
+    },
+
+    async deleteJob() {
+      if (!this.idJobToDelete) {
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("id", this.idJobToDelete);
+
+      try {
+        Utils.toggleLoader(true);
+
+        await Utils.makeRequest(APP_CONFIG.API_BASE_URL + "php/deleteJob.php", {
+          method: "POST",
+          data: formData,
+        });
+
+        $("#formDelete").modal("hide");
+        this.idJobToDelete = "";
+        Utils.showSuccess("Trabajo eliminado exitosamente");
+
+        await this.getJobs();
+      } catch (error) {
+        Utils.showError("Error al eliminar trabajo: " + error.message);
+      } finally {
+        Utils.toggleLoader(false);
+      }
+    },
+
+    async changeStatus(id, currentStatus) {
+      const formData = new FormData();
+      formData.append("id", id);
+      formData.append("status", currentStatus);
+
+      try {
+        Utils.toggleLoader(true);
+
+        await Utils.makeRequest(
+          APP_CONFIG.API_BASE_URL + "php/changeStatusJob.php",
+          {
+            method: "POST",
+            data: formData,
+          }
+        );
+
+        Utils.showSuccess("Estado cambiado exitosamente");
+        await this.getJobs();
+      } catch (error) {
+        Utils.showError("Error al cambiar estado: " + error.message);
+      } finally {
+        Utils.toggleLoader(false);
+      }
+    },
+
     showDescription(description) {
       $("#modalJobDescription").modal("show");
       this.jobDescription = description;
     },
 
-    checkFormUser: function () {
+    // === GESTIÓN DE USUARIO ===
+
+    async getUser() {
+      try {
+        Utils.toggleLoader(true);
+        const userData = await Utils.makeRequest(
+          APP_CONFIG.API_BASE_URL + "php/getUser.php"
+        );
+        this.user = userData;
+      } catch (error) {
+        console.error("Error al cargar usuario:", error);
+      } finally {
+        Utils.toggleLoader(false);
+      }
+    },
+
+    checkFormUser() {
       this.errorsUser = [];
 
       if (!this.user.user) {
@@ -61,299 +328,40 @@ let app = new Vue({
         }
       }
 
-      return this.errorsUser;
+      return this.errorsUser.length === 0;
     },
 
     submitFormUser(e) {
       e.preventDefault();
-      this.checkFormUser();
 
-      if (this.errorsUser.length === 0) {
-        let data = $("#formUser").serialize();
-
-        let url = root + "php/editUser.php";
-
-        loader();
-        $.ajax({
-          type: "POST",
-          url: url,
-          data: data,
-          success: function (response) {
-            if (response) {
-              $("#loader").fadeOut(500);
-              $("#modalFormUser").modal("hide");
-              msgSuccess("El usuario se editó existosamente.");
-              app.getUser();
-            }
-          },
-          fail: function () {
-            $("#loader").fadeOut(500);
-            alert("Hubo un error, intente nuevamente.");
-          },
-        });
+      if (!this.checkFormUser()) {
+        return;
       }
+
+      const data = $("#formUser").serialize();
+
+      Utils.toggleLoader(true);
+      $.ajax({
+        type: "POST",
+        url: APP_CONFIG.API_BASE_URL + "php/editUser.php",
+        data: data,
+        success: (response) => {
+          if (response) {
+            Utils.toggleLoader(false);
+            $("#modalFormUser").modal("hide");
+            Utils.showSuccess("El usuario se editó exitosamente.");
+            this.getUser();
+          }
+        },
+        error: () => {
+          Utils.toggleLoader(false);
+          Utils.showError("Hubo un error, intente nuevamente.");
+        },
+      });
     },
 
     rememberPassword() {
       this.changePass = !this.changePass;
     },
-
-    getJobs() {
-      loader();
-
-      axios.all([axios.get(root + "php/getJobs.php")]).then(
-        axios.spread((Jobs) => {
-          let JobsOrderByName = Jobs.data.sort((a, b) =>
-            a.id - b.id ? 1 : -1
-          ); // Oredenamos por id mayor a menor
-          this.jobs = JobsOrderByName;
-        })
-      );
-
-      $("#loader").fadeOut(500);
-    },
-
-    getUser() {
-      loader();
-
-      axios.all([axios.get(root + "php/getUser.php")]).then(
-        axios.spread((user) => {
-          this.user = user.data;
-        })
-      );
-
-      $("#loader").fadeOut(500);
-    },
-
-    editJob(id) {
-      this.jobEdit = true;
-      this.idJobToEdit = id;
-      let job = this.jobs.filter((student) => student.id == id);
-
-      this.position = job[0].position;
-      this.location = job[0].location;
-      this.job_function = job[0].job_function;
-      this.employment_type = job[0].employment_type;
-      this.description = job[0].description;
-
-      if (job[0].link != 0) {
-        this.link = job[0].link;
-      } else {
-        this.link = "";
-      }
-
-      this.titleForm = "Editar Trabajo";
-
-      $("#modalAddJob").modal("show");
-    },
-
-    setIdJobToDelete(id) {
-      this.idJobToDelete = id;
-    },
-
-    deleteJob() {
-      loader();
-
-      let formData = new FormData();
-      formData.append("id", this.idJobToDelete);
-
-      axios
-        .post(root + "php/deleteJob.php", formData)
-        .then((response) => {
-          if (response.data) {
-            $("#formDelete").modal("hide");
-            this.idJobToDelete = "";
-            msgSuccess("El registro se eliminó existosamente.");
-            app.getJobs();
-          } else {
-            this.idJobToDelete = "";
-            alert("Hubo un error. por favor intente mas tarde");
-          }
-
-          $("#loader").fadeOut(500);
-        })
-        .catch((e) => {
-          alert(e);
-        });
-    },
-
-    changeStatus(id, status) {
-      loader();
-
-      let formData = new FormData();
-      formData.append("id", id);
-      formData.append("status", status);
-
-      axios
-        .post(root + "php/changeStatusJob.php", formData)
-        .then((response) => {
-          if (response.data) {
-            msgSuccess("El registro cambió su estado existosamente.");
-            app.getJobs();
-          } else {
-            alert("Hubo un error. por favor intente mas tarde");
-          }
-
-          $("#loader").fadeOut(500);
-        })
-        .catch((e) => {
-          alert(e);
-        });
-    },
-
-    resetForm() {
-      this.position = "";
-      this.location = "";
-      this.job_function = "";
-      this.employment_type = "";
-      this.description = "";
-      this.link = "";
-      this.titleForm = "Agregar Trabajo";
-      this.jobEdit = false;
-      this.idJobToEdit = false;
-    },
-
-    checkForm: function (e) {
-      e.preventDefault();
-
-      this.errors = [];
-
-      if (!this.position) {
-        this.errors.push("Agregar la posición del trabajo");
-      }
-
-      if (!this.location) {
-        this.errors.push("Agregar la ubicación del trabajo");
-      }
-
-      if (!this.job_function) {
-        this.errors.push("Agregar la función laboral del trabajo");
-      }
-
-      if (!this.employment_type) {
-        this.errors.push("Agregar el tipo de empleo");
-      }
-
-      if (!this.description) {
-        this.errors.push("Agregar una descripción de puesto");
-      }
-
-      if (this.link) {
-        let isUrl = this.validURL(this.link);
-
-        if (!isUrl) {
-          this.errors.push("Verifique la URL");
-        }
-      }
-
-      if (this.errors.length == 0) {
-        this.submitForm();
-      }
-    },
-
-    validURL(str) {
-      var pattern = new RegExp(
-        "^(https?:\\/\\/)?" + // protocol
-          "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|" + // domain name
-          "((\\d{1,3}\\.){3}\\d{1,3}))" + // OR ip (v4) address
-          "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
-          "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
-          "(\\#[-a-z\\d_]*)?$",
-        "i"
-      ); // fragment locator
-      return !!pattern.test(str);
-    },
-
-    submitForm() {
-      loader();
-
-      let form = document.getElementById("formData");
-      let formData = new FormData(form);
-
-      if (app.jobEdit) {
-        formData.append("edit", true);
-        formData.append("id", this.idJobToEdit);
-      }
-
-      axios
-        .post(root + "php/add_edit_job.php", formData)
-        .then((response) => {
-          if (response.data) {
-            $("#modalAddJob").modal("hide");
-            msgSuccess("El registro se agregó / editó existosamente.");
-            app.getJobs();
-          } else {
-            alert("Hubo un error. por favor intente mas tarde");
-          }
-
-          $("#loader").fadeOut(500);
-        })
-        .catch((e) => {
-          alert(e);
-        });
-    },
-  },
-
-  computed: {
-    searchJob: function () {
-      var string = "";
-      var substring = "";
-
-      let jobsFilter = [];
-      for (let i = 0; i < this.jobs.length; i++) {
-        string = this.jobs[i].position.toString().toLowerCase();
-        substring = this.q.toLowerCase();
-
-        if (string.includes(substring)) {
-          jobsFilter.push(this.jobs[i]);
-        }
-      }
-
-      return jobsFilter;
-    },
   },
 });
-
-/**
- * Funcion para mostrar el spin de load cuando se ejecuta al guna operacion asyncronica
- */
-function loader() {
-  $("#loader").css("display", "flex");
-  return;
-}
-
-function msgSuccess(msg) {
-  app.messages.push(msg);
-  setTimeout(function () {
-    $("#messages").fadeOut("slow", function () {
-      app.messages = [];
-    });
-  }, 3000);
-}
-
-// Validacion del Formulario
-(function () {
-  "use strict";
-  window.addEventListener(
-    "load",
-    function () {
-      // Fetch all the forms we want to apply custom Bootstrap validation styles to
-      var forms = document.getElementsByClassName("needs-validation");
-      // Loop over them and prevent submission
-      var validation = Array.prototype.filter.call(forms, function (form) {
-        form.addEventListener(
-          "submit",
-          function (event) {
-            if (form.checkValidity() === false) {
-              event.preventDefault();
-              event.stopPropagation();
-            }
-            form.classList.add("was-validated");
-          },
-          false
-        );
-      });
-    },
-    false
-  );
-})();

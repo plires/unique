@@ -1,12 +1,19 @@
 <?php
 
-include('con.php');
+/**
+ * API para obtener todos los jobs
+ */
 
-$sql = "SELECT * FROM jobs";
-$stmt = $db->prepare($sql);
-$stmt->execute();
-$jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+require_once('../includes/config.inc.php');
+require_once('../clases/Jobs.php');
+require_once('../clases/ResponseHelper.php');
 
-echo json_encode($jobs, JSON_NUMERIC_CHECK);
+try {
+  $jobsModel = new Jobs();
+  $jobs = $jobsModel->getAll('id', 'DESC');
 
-?>
+  ResponseHelper::json($jobs);
+} catch (Exception $e) {
+  error_log("Error en getJobs.php: " . $e->getMessage());
+  ResponseHelper::serverError('Error al obtener los trabajos');
+}

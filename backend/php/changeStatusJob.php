@@ -1,28 +1,40 @@
 <?php
 
-	require_once('con.php');
+/**
+ * API para cambiar estado de jobs (activo/inactivo)
+ */
 
-	if ( isset($_POST['id']) && isset($_POST['status']) ) {
-		
-		$id = $_POST['id'];
-		$status = (int)$_POST['status'];
+require_once('../includes/config.inc.php');
+require_once('../clases/Jobs.php');
+require_once('../clases/ResponseHelper.php');
 
-		if ($status) {
-			$status = 0;
-		} else {
-			$status = 1;
-		}
+// Verificar que sea POST
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+	ResponseHelper::error('Método no permitido', null, 405);
+}
 
-	} else {
-		return false;exit;
+try {
+	if (empty($_POST['id'])) {
+		ResponseHelper::error('ID de trabajo es requerido');
 	}
 
-	$sql = "UPDATE jobs SET status = :status WHERE id = '$id' ";
+	$id = (int)$_POST['id'];
+	$jobsModel = new Jobs();
 
-  $stmt = $db->prepare($sql);
-  $stmt->bindValue(":status", $status, PDO::PARAM_STR);
-  $result = $stmt->execute();
+	// Verificar que el job existe
+	if (!$jobsModel->exists($id)) {
+		ResponseHelper::notFound('El trabajo no existe');
+	}
 
-  echo json_encode($result);
-  
-?>
+	// Cambiar estado
+	$success = $jobsModel->toggleJobStatus($id);
+
+	if ($success) {
+		ResponseHelper::success(null, 'Estado del trabajo cambiado exitosamente');
+	} else {
+		ResponseHelper::serverError('Error al cambiar el estado del trabajo');
+	}
+} catch (Exception $e) {
+	error_log("Error en changeStatusJob.php: " . $e->getMessage());
+	ResponseHelper::serverError('Error al procesar la solicitud');
+}
