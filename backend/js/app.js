@@ -284,7 +284,6 @@ let app = new Vue({
     },
 
     // === GESTIÓN DE USUARIO ===
-
     async getUser() {
       try {
         Utils.toggleLoader(true);
@@ -329,6 +328,11 @@ let app = new Vue({
       }
 
       return this.errorsUser.length === 0;
+    },
+
+    // Alias para compatibilidad
+    checkForm() {
+      return this.checkFormUser();
     },
 
     submitFormUser(e) {

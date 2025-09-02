@@ -2,12 +2,20 @@
 
 /**
  * Configuración dinámica para JavaScript
- * Este archivo genera variables JS con valores del backend
  */
 
+// Iniciar sesión si no está iniciada
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
+
+// Cargar configuración
+require_once('../../includes/config.inc.php');
+
+// Enviar header de JavaScript
 header('Content-Type: application/javascript; charset=utf-8');
 
-require_once('../includes/config.inc.php');
+// No debe haber salida HTML antes de este punto
 ?>
 
 // === CONFIGURACIÓN DINÁMICA DESDE PHP ===
