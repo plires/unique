@@ -145,7 +145,9 @@ let app = new Vue({
       try {
         Utils.toggleLoader(true);
 
-        // Usar axios directamente en lugar de Utils.makeRequest
+        // Guardar el estado de edición ANTES de hacer la petición
+        const isEditing = this.jobEdit;
+
         const response = await axios.post(
           APP_CONFIG.API_BASE_URL + "php/add_edit_job.php",
           formData
@@ -154,14 +156,25 @@ let app = new Vue({
         $("#modalAddJob").modal("hide");
         this.resetForm();
 
-        const message = this.jobEdit
+        // Usar la variable local en lugar de this.jobEdit
+        const message = isEditing
           ? "Trabajo editado exitosamente"
           : "Trabajo agregado exitosamente";
         Utils.showSuccess(message);
 
         await this.getJobs();
       } catch (error) {
-        Utils.showError("Error al guardar trabajo: " + error.message);
+        // Manejar errores de validación del servidor
+        if (error.response?.data?.errors) {
+          // Mostrar los errores del servidor en el formulario
+          this.errors = error.response.data.errors;
+        } else {
+          // Error genérico
+          Utils.showError(
+            "Error al guardar trabajo: " +
+              (error.response?.data?.message || error.message)
+          );
+        }
       } finally {
         Utils.toggleLoader(false);
       }
