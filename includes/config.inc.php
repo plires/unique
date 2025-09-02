@@ -81,13 +81,19 @@ define('MAX_FILE_SIZE', env('MAX_FILE_SIZE', 5242880)); // 5MB por defecto
 // === CONFIGURACIÓN DE TIMEZONE ===
 date_default_timezone_set('America/Argentina/Buenos_Aires');
 
+// === API KEY RECAPTCHA ===
+define('RECAPTCHA_PUBLIC_KEY', env('RECAPTCHA_PUBLIC_KEY'));
+define('RECAPTCHA_SECRET_KEY', env('RECAPTCHA_SECRET_KEY'));
+
 // === CONFIGURACIÓN DE SESIONES ===
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
 // === MANEJO DE ERRORES ===
-if (env('APP_DEBUG', false)) {
+define('APP_DEBUG', env('APP_DEBUG', false));
+
+if (env('APP_DEBUG')) {
   error_reporting(E_ALL);
   ini_set('display_errors', 1);
 } else {

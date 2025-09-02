@@ -1,4 +1,8 @@
 <?php
+// PRIMERO: Iniciar sesión
+session_start();
+
+// SEGUNDO: Definir idioma
 $_SESSION['lang'] = 'es';
 
 include_once('includes/config.inc.php');
@@ -285,6 +289,8 @@ require_once("clases/repositorioSQL.php");
 
 						<form id="send" method="post" class="needs-validation" novalidate>
 
+							<?php $errors = $errors ?? []; ?>
+
 							<!-- Errores Formulario -->
 							<?php if ($errors) : ?>
 								<div id="error" class="alert alert-danger alert-dismissible fade show fadeInLeft" role="alert">
@@ -298,7 +304,7 @@ require_once("clases/repositorioSQL.php");
 										<?php } ?>
 									</ul>
 								</div>
-							<?php endif ?>
+							<?php endif; ?>
 							<!-- Errores Formulario end -->
 
 							<input type="hidden" name="origin" value="<?= $origin ?>">
