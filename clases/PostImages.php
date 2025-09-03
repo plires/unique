@@ -43,7 +43,7 @@ class PostImages extends BaseCRUD
 
     try {
       // Crear directorio si no existe
-      $uploadDir = UPLOAD_PATH_IMAGES;
+      $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/' . UPLOAD_PATH_IMAGES;
       if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0755, true);
       }
@@ -51,42 +51,67 @@ class PostImages extends BaseCRUD
       // Generar nombre único
       $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
       $filename = uniqid('img_') . '_' . time() . '.' . $extension;
-      $filePath = $uploadDir . $filename;
+      $tempPath = $uploadDir . 'temp_' . $filename;
 
-      // Mover archivo
-      if (move_uploaded_file($file['tmp_name'], $filePath)) {
-
-        // Obtener siguiente orden
-        $nextOrder = $this->getNextSortOrder($postId);
-
-        // Guardar en base de datos
-        $imageData = array_merge([
-          'post_id' => $postId,
-          'filename' => $filename,
-          'original_name' => $file['name'],
-          'file_path' => $filePath,
-          'file_size' => $file['size'],
-          'mime_type' => $file['type'],
-          'sort_order' => $nextOrder,
-          'status' => 1
-        ], $imageData);
-
-        $imageId = $this->create($imageData);
-
-        if ($imageId) {
-          return [
-            'success' => true,
-            'id' => $imageId,
-            'filename' => $filename,
-            'file_path' => $filePath
-          ];
-        } else {
-          // Eliminar archivo si falló la BD
-          @unlink($filePath);
-          return ['success' => false, 'errors' => ['Error al guardar en base de datos']];
-        }
-      } else {
+      // Mover archivo temporalmente
+      if (!move_uploaded_file($file['tmp_name'], $tempPath)) {
         return ['success' => false, 'errors' => ['Error al subir el archivo']];
+      }
+
+      // SI tienes ImageManager instalado, usar optimización
+      if (class_exists('ImageManager') && defined('IMAGE_SIZES')) {
+        require_once 'ImageManager.php';
+
+        $imageManager = new ImageManager();
+        $result = $imageManager->processImage($tempPath, $filename, $imageData);
+
+        // Limpiar archivo temporal
+        @unlink($tempPath);
+
+        if (!$result['success']) {
+          return ['success' => false, 'errors' => [$result['error']]];
+        }
+
+        // Guardar información en BD (solo la imagen principal)
+        $mainImage = $result['images']['large'] ?? reset($result['images']);
+      } else {
+        // Fallback: usar imagen original sin optimizar
+        $finalPath = $uploadDir . $filename;
+        rename($tempPath, $finalPath);
+
+        $mainImage = [
+          'filename' => $filename,
+          'path' => UPLOAD_PATH_IMAGES . $filename,
+          'size' => filesize($finalPath)
+        ];
+      }
+
+      // Obtener siguiente orden
+      $nextOrder = $this->getNextSortOrder($postId);
+
+      // Guardar en base de datos
+      $imageData = array_merge([
+        'post_id' => $postId,
+        'filename' => $mainImage['filename'],
+        'original_name' => $file['name'],
+        'file_path' => $mainImage['path'],
+        'file_size' => $mainImage['size'],
+        'mime_type' => $file['type'],
+        'sort_order' => $nextOrder,
+        'status' => 1
+      ], $imageData);
+
+      $imageId = $this->create($imageData);
+
+      if ($imageId) {
+        return [
+          'success' => true,
+          'id' => $imageId,
+          'filename' => $mainImage['filename'],
+          'file_path' => $mainImage['path']
+        ];
+      } else {
+        return ['success' => false, 'errors' => ['Error al guardar en base de datos']];
       }
     } catch (Exception $e) {
       error_log("Error subiendo imagen: " . $e->getMessage());
@@ -218,9 +243,17 @@ class PostImages extends BaseCRUD
       return ['success' => false, 'errors' => ['Imagen no encontrada']];
     }
 
-    // Eliminar archivo físico
-    if (file_exists($image['file_path'])) {
-      @unlink($image['file_path']);
+    // CAMBIO: Construir ruta absoluta para eliminar archivo físico
+    $absolutePath = $_SERVER['DOCUMENT_ROOT'] . '/' . $image['file_path'];
+
+    if (file_exists($absolutePath)) {
+      if (@unlink($absolutePath)) {
+        error_log("Imagen eliminada: " . $absolutePath);
+      } else {
+        error_log("No se pudo eliminar la imagen: " . $absolutePath);
+      }
+    } else {
+      error_log("Archivo no existe: " . $absolutePath);
     }
 
     // Eliminar de base de datos

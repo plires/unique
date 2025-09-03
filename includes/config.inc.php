@@ -80,6 +80,15 @@ define('UPLOAD_PATH_IMAGES', env('UPLOAD_PATH_IMAGES', 'uploads/images/'));
 define('MAX_IMAGE_SIZE', env('MAX_IMAGE_SIZE', 10485760)); // 10MB por defecto
 define('ALLOWED_IMAGE_TYPES', env('ALLOWED_IMAGE_TYPES', 'jpg,jpeg,png,gif,webp'));
 
+// === CONFIGURACIÓN AVANZADA DE IMÁGENES ===
+define('IMAGE_SIZES', env('IMAGE_SIZES', 'thumbnail:300x300,medium:800x600,large:1200x800'));
+define('IMAGE_QUALITY_JPG', env('IMAGE_QUALITY_JPG', 85));
+define('IMAGE_QUALITY_PNG', env('IMAGE_QUALITY_PNG', 90));
+define('IMAGE_QUALITY_WEBP', env('IMAGE_QUALITY_WEBP', 80));
+define('IMAGE_DRIVER', env('IMAGE_DRIVER', 'gd'));
+define('IMAGE_CROP_POSITION', env('IMAGE_CROP_POSITION', 'center'));
+define('GENERATE_WEBP', env('GENERATE_WEBP', true));
+
 // === CONFIGURACIÓN DE TIMEZONE ===
 date_default_timezone_set('America/Argentina/Buenos_Aires');
 
