@@ -20,7 +20,10 @@ class PostImages extends BaseCRUD
     'caption',
     'sort_order',
     'is_featured',
-    'status'
+    'status',
+    'image_size',  // AGREGAR
+    'width',       // AGREGAR
+    'height'       // AGREGAR
   ];
 
   protected $timestamps = true;
@@ -35,6 +38,8 @@ class PostImages extends BaseCRUD
    */
   public function uploadImage($postId, $file, $imageData = [])
   {
+    error_log("=== INICIO UPLOAD IMAGEN ===");
+
     // Validar archivo
     $validation = $this->validateImageFile($file);
     if (!$validation['valid']) {
@@ -53,13 +58,18 @@ class PostImages extends BaseCRUD
       $filename = uniqid('img_') . '_' . time() . '.' . $extension;
       $tempPath = $uploadDir . 'temp_' . $filename;
 
+      error_log("Subiendo archivo temporal a: " . $tempPath);
+
       // Mover archivo temporalmente
       if (!move_uploaded_file($file['tmp_name'], $tempPath)) {
         return ['success' => false, 'errors' => ['Error al subir el archivo']];
       }
 
+      $savedImages = [];
+
       // SI tienes ImageManager instalado, usar optimización
       if (class_exists('ImageManager') && defined('IMAGE_SIZES')) {
+        error_log("Usando ImageManager para procesamiento múltiple");
         require_once 'ImageManager.php';
 
         $imageManager = new ImageManager();
@@ -69,52 +79,98 @@ class PostImages extends BaseCRUD
         @unlink($tempPath);
 
         if (!$result['success']) {
+          error_log("Error en ImageManager: " . $result['error']);
           return ['success' => false, 'errors' => [$result['error']]];
         }
 
-        // Guardar información en BD (solo la imagen principal)
-        $mainImage = $result['images']['large'] ?? reset($result['images']);
+        error_log("ImageManager procesó " . count($result['images']) . " tamaños");
+
+        // GUARDAR TODAS LAS IMÁGENES GENERADAS EN LA BD
+        foreach ($result['images'] as $sizeName => $imageInfo) {
+          error_log("Guardando en BD: " . $sizeName . " - " . $imageInfo['filename']);
+
+          $nextOrder = $this->getNextSortOrder($postId);
+
+          $sizeImageData = array_merge([
+            'post_id' => $postId,
+            'filename' => $imageInfo['filename'],
+            'original_name' => $file['name'],
+            'file_path' => $imageInfo['path'],
+            'file_size' => $imageInfo['size'],
+            'mime_type' => $file['type'],
+            'image_size' => $sizeName,  // CRÍTICO: Guardar el tamaño
+            'width' => $imageInfo['width'],
+            'height' => $imageInfo['height'],
+            'sort_order' => $nextOrder,
+            'status' => 1
+          ], $imageData);
+
+          $imageId = $this->create($sizeImageData);
+
+          if ($imageId) {
+            error_log("Imagen guardada en BD con ID: " . $imageId);
+            $savedImages[$sizeName] = [
+              'id' => $imageId,
+              'filename' => $imageInfo['filename'],
+              'path' => $imageInfo['path'],
+              'size' => $sizeName
+            ];
+          } else {
+            error_log("ERROR: No se pudo guardar imagen en BD para tamaño: " . $sizeName);
+          }
+        }
       } else {
+        error_log("Fallback: No se encontró ImageManager o IMAGE_SIZES no definido");
+
         // Fallback: usar imagen original sin optimizar
         $finalPath = $uploadDir . $filename;
         rename($tempPath, $finalPath);
 
-        $mainImage = [
+        $nextOrder = $this->getNextSortOrder($postId);
+        $relativePath = UPLOAD_PATH_IMAGES . $filename;
+
+        $originalImageData = array_merge([
+          'post_id' => $postId,
           'filename' => $filename,
-          'path' => UPLOAD_PATH_IMAGES . $filename,
-          'size' => filesize($finalPath)
-        ];
+          'original_name' => $file['name'],
+          'file_path' => $relativePath,
+          'file_size' => filesize($finalPath),
+          'mime_type' => $file['type'],
+          'image_size' => 'original',
+          'width' => 0,
+          'height' => 0,
+          'sort_order' => $nextOrder,
+          'status' => 1
+        ], $imageData);
+
+        $imageId = $this->create($originalImageData);
+
+        if ($imageId) {
+          $savedImages['original'] = [
+            'id' => $imageId,
+            'filename' => $filename,
+            'path' => $relativePath,
+            'size' => 'original'
+          ];
+        }
       }
 
-      // Obtener siguiente orden
-      $nextOrder = $this->getNextSortOrder($postId);
+      error_log("=== RESULTADO FINAL ===");
+      error_log("Imágenes guardadas en BD: " . count($savedImages));
 
-      // Guardar en base de datos
-      $imageData = array_merge([
-        'post_id' => $postId,
-        'filename' => $mainImage['filename'],
-        'original_name' => $file['name'],
-        'file_path' => $mainImage['path'],
-        'file_size' => $mainImage['size'],
-        'mime_type' => $file['type'],
-        'sort_order' => $nextOrder,
-        'status' => 1
-      ], $imageData);
-
-      $imageId = $this->create($imageData);
-
-      if ($imageId) {
+      if (!empty($savedImages)) {
         return [
           'success' => true,
-          'id' => $imageId,
-          'filename' => $mainImage['filename'],
-          'file_path' => $mainImage['path']
+          'images_created' => count($savedImages),
+          'images' => $savedImages,
+          'main_image' => reset($savedImages) // Primera imagen como principal
         ];
       } else {
-        return ['success' => false, 'errors' => ['Error al guardar en base de datos']];
+        return ['success' => false, 'errors' => ['Error al guardar las imágenes en base de datos']];
       }
     } catch (Exception $e) {
-      error_log("Error subiendo imagen: " . $e->getMessage());
+      error_log("ERROR CRÍTICO en uploadImage: " . $e->getMessage());
+      error_log("Stack trace: " . $e->getTraceAsString());
       return ['success' => false, 'errors' => ['Error interno al subir imagen']];
     }
   }
@@ -331,5 +387,34 @@ class PostImages extends BaseCRUD
       'featured' => $featured,
       'size_stats' => $sizeStats
     ];
+  }
+
+  /**
+   * Obtener imagen específica por tamaño
+   */
+  public function getImageBySize($postId, $size = 'large')
+  {
+    return $this->db->fetch(
+      "SELECT * FROM images_id WHERE post_id = :post_id AND image_size = :size AND status = 1",
+      ['post_id' => $postId, 'size' => $size]
+    );
+  }
+
+  /**
+   * Obtener todas las imágenes de un post agrupadas por tamaño
+   */
+  public function getImagesBySizes($postId)
+  {
+    $images = $this->db->fetchAll(
+      "SELECT * FROM images_id WHERE post_id = :post_id AND status = 1 ORDER BY sort_order, image_size",
+      ['post_id' => $postId]
+    );
+
+    $grouped = [];
+    foreach ($images as $image) {
+      $grouped[$image['image_size']][] = $image;
+    }
+
+    return $grouped;
   }
 }

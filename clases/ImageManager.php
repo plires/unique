@@ -28,25 +28,38 @@ class ImageManager
   {
     $results = [];
 
+    error_log("=== INICIO PROCESAMIENTO IMAGEN ===");
+    error_log("Archivo: " . $filePath);
+    error_log("Filename: " . $filename);
+    error_log("Tamaños configurados: " . print_r($this->sizes, true));
+
     try {
       $image = $this->manager->read($filePath);
+      error_log("Imagen leída correctamente");
 
       // Procesar cada tamaño configurado
       foreach ($this->sizes as $sizeName => $dimensions) {
+        error_log("Procesando tamaño: " . $sizeName . " - " . $dimensions['width'] . "x" . $dimensions['height']);
+
         $processedImage = clone $image;
         $processedImage = $this->resizeImage($processedImage, $dimensions, $options);
 
         $sizedFilename = $this->generateSizedFilename($filename, $sizeName);
         $outputPath = $this->getUploadPath() . $sizedFilename;
 
+        error_log("Guardando en: " . $outputPath);
+
         // Guardar imagen con calidad específica
         $quality = $this->getQuality($image->origin()->mediaType());
         $processedImage->save($outputPath, $quality);
+
+        error_log("Imagen guardada: " . $sizedFilename . " (" . filesize($outputPath) . " bytes)");
 
         // Generar WebP si está habilitado
         if (GENERATE_WEBP) {
           $webpPath = $this->generateWebPPath($outputPath);
           $processedImage->toWebp($quality)->save($webpPath);
+          error_log("WebP generado: " . $webpPath);
         }
 
         $results[$sizeName] = [
@@ -58,9 +71,12 @@ class ImageManager
         ];
       }
 
+      error_log("=== PROCESAMIENTO COMPLETADO ===");
+      error_log("Imágenes generadas: " . count($results));
       return ['success' => true, 'images' => $results];
     } catch (Exception $e) {
-      error_log("Error procesando imagen: " . $e->getMessage());
+      error_log("ERROR procesando imagen: " . $e->getMessage());
+      error_log("Stack trace: " . $e->getTraceAsString());
       return ['success' => false, 'error' => $e->getMessage()];
     }
   }
