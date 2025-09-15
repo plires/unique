@@ -5,10 +5,24 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
-if ($_SESSION['lang'] === 'es') {
-  require 'vendor/autoload.php';
-} else {
-  require '../vendor/autoload.php';
+// Detectar la ruta correcta del autoloader automáticamente
+$autoloadPaths = [
+  __DIR__ . '/../vendor/autoload.php',  // Desde clases/ hacia raíz
+  __DIR__ . '/../../vendor/autoload.php', // Si estamos más profundo
+  'vendor/autoload.php' // Ruta relativa como fallback
+];
+
+$autoloadLoaded = false;
+foreach ($autoloadPaths as $path) {
+  if (file_exists($path)) {
+    require $path;
+    $autoloadLoaded = true;
+    break;
+  }
+}
+
+if (!$autoloadLoaded) {
+  die('Error: No se pudo encontrar vendor/autoload.php');
 }
 
 class App
