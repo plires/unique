@@ -1,4 +1,8 @@
 <?php
+// PRIMERO: Iniciar sesión
+session_start();
+
+// SEGUNDO: Definir idioma y página actual
 $_SESSION['lang'] = 'en';
 $current = 'talento';
 
