@@ -67,7 +67,7 @@ require_once("clases/repositorioSQL.php");
 				<ul>
 					<li><a class="btn_nav transition" href="#equipo">EQUIPO</a></li>
 					<li><a class="btn_nav transition" href="#servicios">SERVICIOS</a></li>
-					<li><a class="transition" href="busca-trabajo.php">EMPLEOS</a></li>
+					<li><a class="transition" href="https://unique.hiringroom.com/jobs" target="_blank" rel="noopener noreferrer">EMPLEOS</a></li>
 					<li><a class="transition" href="busca-talento.php">TALENTOS</a></li>
 					<li><a class="btn_nav transition" href="#contacto">CONTACTO</a></li>
 				</ul>
@@ -79,11 +79,7 @@ require_once("clases/repositorioSQL.php");
 					<a class="transition <?= $activeEN ?>" href="./en/">ENG</a>
 					<a class="transition <?= $activeES ?>" href="./">SPA</a>
 				</div>
-				<div>
-					<a class="transition" href="https://www.instagram.com/unqtalent/" target="_blank"><i class="fab fa-instagram-square"></i></a>
-					<a class="transition" href="https://www.linkedin.com/company/unqtalent/about/" target="_blank"><i class="fab fa-linkedin"></i></a>
-					<a class="transition" href="https://api.whatsapp.com/send?phone=+5491157550306&text=Hola!%20Necesito%20hacer%20una%20consulta!" target="_blank"><i class="fab fa-whatsapp-square"></i></a>
-				</div>
+				<?php include('./includes/rrss.php'); ?>
 			</div>
 		</div>
 	</header>
@@ -221,7 +217,7 @@ require_once("clases/repositorioSQL.php");
 						<div>
 							<h3>BUSCA TRABAJO</h3>
 							<p class="roboto">Unique Talent Solutions te conectara con el empleador que sea el match perfecto.</p>
-							<a href="busca-trabajo.php" class="transition btn btn-primary">BUSCAR</a>
+							<a href="https://unique.hiringroom.com/jobs" target="_blank" rel="noopener noreferrer" class="transition btn btn-primary">BUSCAR</a>
 						</div>
 					</div>
 				</div>

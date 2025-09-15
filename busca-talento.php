@@ -65,7 +65,7 @@ require_once("clases/repositorioSQL.php");
 				<ul>
 					<li><a class="btn_nav transition" href="./#equipo">EQUIPO</a></li>
 					<li><a class="btn_nav transition" href="./#servicios">SERVICIOS</a></li>
-					<li><a class="transition <?= ($current === 'trabajo') ? 'active' : ''; ?>" href="busca-trabajo.php">EMPLEOS</a></li>
+					<li><a class="transition <?= ($current === 'trabajo') ? 'active' : ''; ?>" href="https://unique.hiringroom.com/jobs" target="_blank" rel="noopener noreferrer">EMPLEOS</a></li>
 					<li><a class="transition <?= ($current === 'talento') ? 'active' : ''; ?>" href="busca-talento.php">TALENTOS</a></li>
 					<li><a class="btn_nav transition" href="./#contacto">CONTACTO</a></li>
 				</ul>
