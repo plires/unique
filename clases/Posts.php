@@ -12,6 +12,7 @@ class Posts extends BaseCRUD
   protected $fillable = [
     'title',
     'content',
+    'youtube_url',  // NUEVO CAMPO
     'status'
   ];
 
@@ -34,16 +35,14 @@ class Posts extends BaseCRUD
                 p.id,
                 p.title,
                 p.content,
+                p.youtube_url,  -- NUEVO CAMPO
                 p.status,
                 p.created_at,
                 p.updated_at,
                 COUNT(DISTINCT i.id) as total_images,
-                COUNT(DISTINCT v.id) as total_videos,
-                GROUP_CONCAT(DISTINCT i.filename ORDER BY i.sort_order) as image_files,
-                GROUP_CONCAT(DISTINCT v.filename ORDER BY v.sort_order) as video_files
+                GROUP_CONCAT(DISTINCT i.filename ORDER BY i.sort_order) as image_files
             FROM posts p
             LEFT JOIN images_id i ON p.id = i.post_id AND i.status = 1
-            LEFT JOIN videos_id v ON p.id = v.post_id AND v.status = 1
             {$statusCondition}
             GROUP BY p.id
             ORDER BY p.created_at DESC
@@ -53,7 +52,7 @@ class Posts extends BaseCRUD
   }
 
   /**
-   * Obtener post completo con todas sus imágenes y videos
+   * Obtener post completo con todas sus imágenes
    */
   public function getPostComplete($id)
   {
@@ -62,20 +61,13 @@ class Posts extends BaseCRUD
       return null;
     }
 
-    // Obtener imágenes
+    // Obtener imágenes (NO VIDEOS)
     $images = $this->db->fetchAll(
       "SELECT * FROM images_id WHERE post_id = :post_id AND status = 1 ORDER BY sort_order",
       ['post_id' => $id]
     );
 
-    // Obtener videos
-    $videos = $this->db->fetchAll(
-      "SELECT * FROM videos_id WHERE post_id = :post_id AND status = 1 ORDER BY sort_order",
-      ['post_id' => $id]
-    );
-
     $post['images'] = $images;
-    $post['videos'] = $videos;
 
     return $post;
   }
@@ -85,7 +77,7 @@ class Posts extends BaseCRUD
    */
   public function createPost($data)
   {
-    $errors = $this->validate($data);
+    $errors = $this->validatePostData($data);
 
     if (!empty($errors)) {
       return ['success' => false, 'errors' => $errors];
@@ -94,10 +86,18 @@ class Posts extends BaseCRUD
     // Establecer valores por defecto
     $data['status'] = $data['status'] ?? 1;
 
-    $postId = $this->create($data);
+    // Validar y limpiar URL de YouTube si se proporciona
+    if (!empty($data['youtube_url'])) {
+      $data['youtube_url'] = $this->validateAndCleanYouTubeUrl($data['youtube_url']);
+      if (!$data['youtube_url']) {
+        return ['success' => false, 'errors' => ['URL de YouTube no válida']];
+      }
+    }
 
-    if ($postId) {
-      return ['success' => true, 'id' => $postId];
+    $id = $this->create($data);
+
+    if ($id) {
+      return ['success' => true, 'id' => $id];
     } else {
       return ['success' => false, 'errors' => ['Error al crear el post']];
     }
@@ -108,14 +108,22 @@ class Posts extends BaseCRUD
    */
   public function updatePost($id, $data)
   {
-    if (!$this->exists($id)) {
-      return ['success' => false, 'errors' => ['Post no encontrado']];
-    }
-
-    $errors = $this->validate($data, $id);
+    $errors = $this->validatePostData($data, $id);
 
     if (!empty($errors)) {
       return ['success' => false, 'errors' => $errors];
+    }
+
+    // Validar y limpiar URL de YouTube si se proporciona
+    if (isset($data['youtube_url'])) {
+      if (!empty($data['youtube_url'])) {
+        $data['youtube_url'] = $this->validateAndCleanYouTubeUrl($data['youtube_url']);
+        if (!$data['youtube_url']) {
+          return ['success' => false, 'errors' => ['URL de YouTube no válida']];
+        }
+      } else {
+        $data['youtube_url'] = null; // Permitir eliminar la URL
+      }
     }
 
     $success = $this->update($id, $data);
@@ -128,170 +136,91 @@ class Posts extends BaseCRUD
   }
 
   /**
-   * Validaciones específicas para posts
+   * Validar datos del post
    */
-  protected function validate($data, $id = null)
+  private function validatePostData($data, $id = null)
   {
     $errors = [];
 
-    if (empty(trim($data['title'] ?? ''))) {
+    // Validar título
+    if (empty($data['title']) || trim($data['title']) === '') {
       $errors[] = 'El título es obligatorio';
     } elseif (strlen($data['title']) > 255) {
-      $errors[] = 'El título no puede tener más de 255 caracteres';
+      $errors[] = 'El título no puede exceder 255 caracteres';
     }
 
-    if (empty(trim($data['content'] ?? ''))) {
+    // Validar contenido
+    if (empty($data['content']) || trim($data['content']) === '' || trim($data['content']) === '<p><br></p>') {
       $errors[] = 'El contenido es obligatorio';
     }
 
-    // Verificar título único (excluyendo el post actual si es edición)
-    if (!empty($data['title'])) {
-      $existingPost = $this->db->fetch(
-        "SELECT id FROM posts WHERE title = :title AND id != :id",
-        ['title' => $data['title'], 'id' => $id ?? 0]
-      );
+    // Validar que el título sea único (excluyendo el post actual si es edición)
+    $sql = "SELECT id FROM posts WHERE title = :title" . ($id ? " AND id != :id" : "");
+    $params = ['title' => $data['title']];
+    if ($id) {
+      $params['id'] = $id;
+    }
 
-      if ($existingPost) {
-        $errors[] = 'Ya existe un post con este título';
-      }
+    $existing = $this->db->fetch($sql, $params);
+    if ($existing) {
+      $errors[] = 'Ya existe un post con este título';
     }
 
     return $errors;
   }
 
   /**
-   * Eliminar post y todos sus medios asociados
+   * Validar y limpiar URL de YouTube
    */
-  public function deletePost($id)
+  private function validateAndCleanYouTubeUrl($url)
   {
-    if (!$this->exists($id)) {
-      return ['success' => false, 'errors' => ['Post no encontrado']];
+    if (empty($url)) {
+      return null;
     }
 
-    try {
-      $this->db->beginTransaction();
+    // Patrones para diferentes formatos de URL de YouTube
+    $patterns = [
+      '/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/',
+      '/youtube\.com\/.*[?&]v=([^&\n]+)/'
+    ];
 
-      // Obtener archivos para eliminar físicamente
-      $images = $this->db->fetchAll(
-        "SELECT file_path FROM images_id WHERE post_id = :post_id",
-        ['post_id' => $id]
-      );
-
-      $videos = $this->db->fetchAll(
-        "SELECT file_path, thumbnail_path FROM videos_id WHERE post_id = :post_id",
-        ['post_id' => $id]
-      );
-
-      // Eliminar registros de base de datos (las FK en CASCADE se encargan de images_id y videos_id)
-      $success = $this->delete($id);
-
-      if ($success) {
-        $this->db->commit();
-
-        // Eliminar archivos físicos en background
-        $this->deletePhysicalFiles($images, $videos);
-
-        return ['success' => true];
-      } else {
-        $this->db->rollback();
-        return ['success' => false, 'errors' => ['Error al eliminar el post']];
-      }
-    } catch (Exception $e) {
-      $this->db->rollback();
-      error_log("Error eliminando post: " . $e->getMessage());
-      return ['success' => false, 'errors' => ['Error interno al eliminar el post']];
-    }
-  }
-
-  /**
-   * Eliminar archivos físicos
-   */
-  private function deletePhysicalFiles($images, $videos)
-  {
-    // Eliminar imágenes
-    foreach ($images as $image) {
-      if (file_exists($image['file_path'])) {
-        @unlink($image['file_path']);
+    foreach ($patterns as $pattern) {
+      if (preg_match($pattern, $url, $matches)) {
+        $videoId = $matches[1];
+        // Retornar URL normalizada
+        return "https://www.youtube.com/watch?v=" . $videoId;
       }
     }
 
-    // Eliminar videos y thumbnails
-    foreach ($videos as $video) {
-      if ($video['file_path'] && file_exists($video['file_path'])) {
-        @unlink($video['file_path']);
-      }
-      if ($video['thumbnail_path'] && file_exists($video['thumbnail_path'])) {
-        @unlink($video['thumbnail_path']);
-      }
-    }
+    return false; // URL no válida
   }
 
   /**
-   * Buscar posts por título o contenido
+   * Extraer ID de video de YouTube
    */
-  public function searchPosts($query, $includeInactive = false)
+  public function getYouTubeVideoId($url)
   {
-    $conditions = ['(p.title LIKE :query OR p.content LIKE :query)'];
-    $params = ['query' => "%{$query}%"];
-
-    if (!$includeInactive) {
-      $conditions[] = 'p.status = 1';
+    if (empty($url)) {
+      return null;
     }
 
-    $where = implode(' AND ', $conditions);
+    $patterns = [
+      '/youtube\.com\/watch\?v=([^&\n]+)/',
+      '/youtube\.com\/embed\/([^&\n]+)/',
+      '/youtu\.be\/([^&\n]+)/'
+    ];
 
-    $sql = "
-            SELECT 
-                p.id,
-                p.title,
-                p.content,
-                p.status,
-                p.created_at,
-                p.updated_at,
-                COUNT(DISTINCT i.id) as total_images,
-                COUNT(DISTINCT v.id) as total_videos
-            FROM posts p
-            LEFT JOIN images_id i ON p.id = i.post_id AND i.status = 1
-            LEFT JOIN videos_id v ON p.id = v.post_id AND v.status = 1
-            WHERE {$where}
-            GROUP BY p.id
-            ORDER BY p.created_at DESC
-        ";
+    foreach ($patterns as $pattern) {
+      if (preg_match($pattern, $url, $matches)) {
+        return $matches[1];
+      }
+    }
 
-    return $this->db->fetchAll($sql, $params);
+    return null;
   }
 
   /**
-   * Obtener posts activos para el frontend
-   */
-  public function getActivePosts($limit = null)
-  {
-    $sql = "
-            SELECT 
-                p.id,
-                p.title,
-                p.content,
-                p.created_at,
-                p.updated_at,
-                COUNT(DISTINCT i.id) as total_images,
-                COUNT(DISTINCT v.id) as total_videos
-            FROM posts p
-            LEFT JOIN images_id i ON p.id = i.post_id AND i.status = 1
-            LEFT JOIN videos_id v ON p.id = v.post_id AND v.status = 1
-            WHERE p.status = 1
-            GROUP BY p.id
-            ORDER BY p.created_at DESC
-        ";
-
-    if ($limit) {
-      $sql .= " LIMIT " . (int)$limit;
-    }
-
-    return $this->query($sql);
-  }
-
-  /**
-   * Cambiar estado del post
+   * Cambiar estado del post (activo/inactivo)
    */
   public function togglePostStatus($id)
   {
@@ -299,27 +228,59 @@ class Posts extends BaseCRUD
   }
 
   /**
-   * Obtener estadísticas de posts
+   * Obtener URL de miniatura de YouTube
    */
-  public function getStats()
+  public function getYouTubeThumbnail($url)
   {
-    $total = $this->count();
-    $active = $this->count('status = 1');
-    $inactive = $this->count('status = 0');
+    $videoId = $this->getYouTubeVideoId($url);
+    if ($videoId) {
+      return "https://img.youtube.com/vi/{$videoId}/maxresdefault.jpg";
+    }
+    return null;
+  }
 
-    $totalImages = $this->db->fetch("SELECT COUNT(*) as total FROM images_id WHERE status = 1");
-    $totalVideos = $this->db->fetch("SELECT COUNT(*) as total FROM videos_id WHERE status = 1");
+  /**
+   * Eliminar post y todos sus medios asociados
+   */
+  public function deletePost($id)
+  {
+    try {
+      $this->db->getConnection()->beginTransaction();
 
-    return [
-      'posts' => [
-        'total' => $total,
-        'active' => $active,
-        'inactive' => $inactive
-      ],
-      'media' => [
-        'images' => $totalImages['total'],
-        'videos' => $totalVideos['total']
-      ]
-    ];
+      // Eliminar imágenes asociadas
+      $images = $this->db->fetchAll(
+        "SELECT * FROM images_id WHERE post_id = :post_id",
+        ['post_id' => $id]
+      );
+
+      foreach ($images as $image) {
+        // Eliminar archivo físico
+        $imagePath = $image['file_path'];
+        if (file_exists($imagePath)) {
+          unlink($imagePath);
+        }
+      }
+
+      // Eliminar registros de imágenes
+      $this->db->execute(
+        "DELETE FROM images_id WHERE post_id = :post_id",
+        ['post_id' => $id]
+      );
+
+      // Eliminar el post
+      $success = $this->delete($id);
+
+      if ($success) {
+        $this->db->getConnection()->commit();
+        return ['success' => true];
+      } else {
+        $this->db->getConnection()->rollBack();
+        return ['success' => false, 'errors' => ['Error al eliminar el post']];
+      }
+    } catch (Exception $e) {
+      $this->db->getConnection()->rollBack();
+      error_log("Error eliminando post: " . $e->getMessage());
+      return ['success' => false, 'errors' => ['Error interno al eliminar el post']];
+    }
   }
 }

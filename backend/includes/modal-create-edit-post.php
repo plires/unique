@@ -24,6 +24,26 @@
             <div id="editor" style="height: 300px;"></div>
           </div>
 
+          <!-- NUEVO CAMPO: YouTube URL -->
+          <div class="form-group">
+            <label for="youtubeUrl">URL de YouTube (opcional)</label>
+            <input
+              type="url"
+              class="form-control"
+              id="youtubeUrl"
+              v-model="currentPost.youtube_url"
+              placeholder="https://www.youtube.com/watch?v=..."
+              @blur="validateYouTubeUrl">
+            <small class="form-text text-muted">
+              Ingrese la URL completa del video de YouTube. Ejemplo: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+            </small>
+            <div v-if="youtubePreview" class="mt-2">
+              <small class="text-success">
+                <i class="fas fa-check-circle"></i> URL válida detectada
+              </small>
+            </div>
+          </div>
+
           <div class="form-group">
             <div class="custom-control custom-checkbox">
               <input

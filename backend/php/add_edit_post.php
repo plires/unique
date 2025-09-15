@@ -20,8 +20,14 @@ try {
   $data = [
     'title' => $_POST['title'] ?? '',
     'content' => $_POST['content'] ?? '',
+    'youtube_url' => $_POST['youtube_url'] ?? '',  // NUEVO CAMPO
     'status' => isset($_POST['status']) ? (int)$_POST['status'] : 1
   ];
+
+  // Limpiar youtube_url si está vacío
+  if (empty(trim($data['youtube_url']))) {
+    $data['youtube_url'] = null;
+  }
 
   if (isset($_POST['edit']) && !empty($_POST['id'])) {
     // Actualizar post existente

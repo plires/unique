@@ -19,16 +19,18 @@ let postsApp = new Vue({
       id: null,
       title: "",
       content: "",
+      youtube_url: "", // NUEVO CAMPO
       active: true,
     },
     formErrors: [],
+    youtubePreview: false, // NUEVO CAMPO
 
-    // Modal de Medios
+    // Modal de Medios (SOLO IMÁGENES)
     currentMediaPost: {
       id: null,
       title: "",
       images: [],
-      videos: [],
+      // videos: [], // ELIMINADO
     },
     newImage: {
       alt_text: "",
@@ -64,6 +66,34 @@ let postsApp = new Vue({
   },
 
   methods: {
+    // === VALIDACIÓN DE YOUTUBE ===
+    validateYouTubeUrl() {
+      if (!this.currentPost.youtube_url) {
+        this.youtubePreview = false;
+        return;
+      }
+
+      const youtubeRegex =
+        /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/)|youtu\.be\/)[\w-]+(&.*)?$/;
+      this.youtubePreview = youtubeRegex.test(this.currentPost.youtube_url);
+    },
+
+    extractYouTubeId(url) {
+      if (!url) return null;
+
+      const patterns = [
+        /youtube\.com\/watch\?v=([^&\n]+)/,
+        /youtube\.com\/embed\/([^&\n]+)/,
+        /youtu\.be\/([^&\n]+)/,
+      ];
+
+      for (let pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) return match[1];
+      }
+      return null;
+    },
+
     // === USUARIO ===
     async getUser() {
       try {
@@ -78,20 +108,17 @@ let postsApp = new Vue({
 
     submitFormUser(e) {
       e.preventDefault();
-      // Implementar lógica de actualización de usuario
       console.log("Actualizar usuario:", this.user);
     },
 
     checkFormUser() {
       this.errorsUser = [];
-
       if (!this.user.user) {
         this.errorsUser.push("El nombre de usuario es obligatorio.");
       }
       if (!this.user.email) {
         this.errorsUser.push("El email es obligatorio.");
       }
-
       return this.errorsUser.length === 0;
     },
 
@@ -136,7 +163,6 @@ let postsApp = new Vue({
     },
 
     // === GESTIÓN DE POSTS ===
-
     openCreateModal() {
       this.isEditing = false;
       this.modalTitle = "Crear Post";
@@ -144,9 +170,11 @@ let postsApp = new Vue({
         id: null,
         title: "",
         content: "",
+        youtube_url: "", // NUEVO CAMPO
         active: true,
       };
       this.formErrors = [];
+      this.youtubePreview = false; // RESET VALIDACIÓN
 
       // Limpiar editor
       if (this.quillEditor) {
@@ -157,26 +185,28 @@ let postsApp = new Vue({
     },
 
     async editPost(postId) {
-      const post = this.posts.find((p) => p.id === postId);
-      if (!post) {
-        this.showError("Post no encontrado");
-        return;
-      }
+      // ✅ CORRECTO: Cargar datos completos del post
+      const postData = await this.loadPostComplete(postId);
+      if (!postData) return;
 
       this.isEditing = true;
       this.modalTitle = "Editar Post";
       this.currentPost = {
-        id: post.id,
-        title: post.title,
-        content: post.content,
-        active: post.status == 1,
+        id: postData.id,
+        title: postData.title,
+        content: postData.content,
+        youtube_url: postData.youtube_url || "", // NUEVO CAMPO
+        active: postData.status == 1,
       };
       this.formErrors = [];
 
       // Cargar contenido en el editor
       if (this.quillEditor) {
-        this.quillEditor.root.innerHTML = post.content;
+        this.quillEditor.root.innerHTML = postData.content;
       }
+
+      // Validar URL de YouTube si existe
+      this.validateYouTubeUrl();
 
       $("#postModal").modal("show");
     },
@@ -196,6 +226,11 @@ let postsApp = new Vue({
         this.formErrors.push("El contenido es obligatorio");
       }
 
+      // Validar URL de YouTube si se proporcionó
+      if (this.currentPost.youtube_url && !this.youtubePreview) {
+        this.formErrors.push("La URL de YouTube no es válida");
+      }
+
       if (this.formErrors.length > 0) {
         return;
       }
@@ -204,6 +239,7 @@ let postsApp = new Vue({
       const formData = new FormData();
       formData.append("title", this.currentPost.title);
       formData.append("content", content);
+      formData.append("youtube_url", this.currentPost.youtube_url || ""); // NUEVO CAMPO
       formData.append("status", this.currentPost.active ? 1 : 0);
 
       if (this.isEditing) {
@@ -214,7 +250,7 @@ let postsApp = new Vue({
       try {
         this.showLoader();
 
-        const response = await axios.post(
+        await axios.post(
           window.APP_CONFIG.API_BASE_URL + "php/add_edit_post.php",
           formData
         );
@@ -265,41 +301,7 @@ let postsApp = new Vue({
       }
     },
 
-    setPostToDelete(postId) {
-      this.postToDelete = postId;
-    },
-
-    async confirmDelete() {
-      if (!this.postToDelete) return;
-
-      const formData = new FormData();
-      formData.append("id", this.postToDelete);
-
-      try {
-        this.showLoader();
-
-        await axios.post(
-          window.APP_CONFIG.API_BASE_URL + "php/deletePost.php",
-          formData
-        );
-
-        $("#deleteModal").modal("hide");
-        this.postToDelete = null;
-
-        this.showSuccess("Post eliminado exitosamente");
-        await this.loadPosts();
-      } catch (error) {
-        this.showError(
-          "Error al eliminar post: " +
-            (error.response?.data?.message || error.message)
-        );
-      } finally {
-        this.hideLoader();
-      }
-    },
-
-    // === GESTIÓN DE MEDIOS ===
-
+    // === GESTIÓN DE MEDIOS (SOLO IMÁGENES) ===
     async manageMedia(postId) {
       const postData = await this.loadPostComplete(postId);
       if (!postData) return;
@@ -308,7 +310,7 @@ let postsApp = new Vue({
         id: postData.id,
         title: postData.title,
         images: postData.images || [],
-        videos: postData.videos || [],
+        // videos: postData.videos || [], // ELIMINADO
       };
 
       this.newImage = {
@@ -375,15 +377,13 @@ let postsApp = new Vue({
     },
 
     async deleteImage(imageId) {
-      if (!confirm("¿Está seguro de eliminar esta imagen?")) {
-        return;
-      }
+      if (!confirm("¿Está seguro de eliminar esta imagen?")) return;
+
+      const formData = new FormData();
+      formData.append("id", imageId);
 
       try {
         this.showLoader();
-
-        const formData = new FormData();
-        formData.append("id", imageId);
 
         await axios.post(
           window.APP_CONFIG.API_BASE_URL + "php/deleteImage.php",
@@ -409,46 +409,86 @@ let postsApp = new Vue({
       }
     },
 
-    // === UTILIDADES ===
-
-    initializeQuillEditor() {
-      this.quillEditor = new Quill("#editor", {
-        theme: "snow",
-        modules: {
-          toolbar: [
-            [{ header: [1, 2, 3, false] }],
-            ["bold", "italic", "underline", "strike"],
-            [{ list: "ordered" }, { list: "bullet" }],
-            [{ color: [] }, { background: [] }],
-            [{ align: [] }],
-            ["link", "image"],
-            ["clean"],
-          ],
-        },
-        placeholder: "Escriba el contenido del post aquí...",
-      });
+    // === ELIMINACIÓN ===
+    setPostToDelete(postId) {
+      this.postToDelete = postId;
     },
 
-    getImageUrl(filePath) {
-      // Convertir ruta del servidor a URL accesible
-      if (filePath.startsWith("uploads/")) {
-        return window.APP_CONFIG.FRONTEND_URL + "/" + filePath;
+    async confirmDelete() {
+      if (!this.postToDelete) return;
+
+      const formData = new FormData();
+      formData.append("id", this.postToDelete);
+
+      try {
+        this.showLoader();
+
+        await axios.post(
+          window.APP_CONFIG.API_BASE_URL + "php/deletePost.php",
+          formData
+        );
+
+        $("#deleteModal").modal("hide");
+        this.postToDelete = null;
+
+        this.showSuccess("Post eliminado exitosamente");
+        await this.loadPosts();
+      } catch (error) {
+        this.showError(
+          "Error al eliminar post: " +
+            (error.response?.data?.message || error.message)
+        );
+      } finally {
+        this.hideLoader();
       }
-      return filePath;
+    },
+
+    // === UTILIDADES ===
+    getImageUrl(imagePath) {
+      return window.APP_CONFIG.FRONTEND_URL + "/" + imagePath;
+    },
+
+    truncateContent(content, maxLength = 100) {
+      const text = content.replace(/<[^>]*>/g, "");
+      return text.length > maxLength
+        ? text.substring(0, maxLength) + "..."
+        : text;
     },
 
     formatDate(dateString) {
+      if (!dateString) return "-";
       const date = new Date(dateString);
-      return (
-        date.toLocaleDateString("es-ES") +
-        " " +
-        date.toLocaleTimeString("es-ES", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      );
+      return date.toLocaleDateString("es-ES", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     },
 
+    initializeQuillEditor() {
+      this.$nextTick(() => {
+        if (document.getElementById("editor")) {
+          this.quillEditor = new Quill("#editor", {
+            theme: "snow",
+            modules: {
+              toolbar: [
+                [{ header: [1, 2, 3, false] }],
+                ["bold", "italic", "underline", "strike"],
+                [{ color: [] }, { background: [] }],
+                [{ list: "ordered" }, { list: "bullet" }],
+                ["blockquote", "code-block"],
+                ["link", "image"],
+                ["clean"],
+              ],
+            },
+          });
+        }
+      });
+    },
+
+    // === MENSAJES Y LOADER ===
     showLoader() {
       if (typeof loader === "function") {
         loader();
@@ -473,8 +513,8 @@ let postsApp = new Vue({
     },
 
     showError(message) {
-      alert(message);
-      console.error(message);
+      console.error("Error:", message);
+      alert("Error: " + message); // Temporal - puedes mejorar esto
     },
   },
 });
