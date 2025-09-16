@@ -12,7 +12,7 @@ class Posts extends BaseCRUD
   protected $fillable = [
     'title',
     'content',
-    'youtube_url',  // NUEVO CAMPO
+    'youtube_url',
     'status'
   ];
 
@@ -31,28 +31,30 @@ class Posts extends BaseCRUD
     $statusCondition = $includeInactive ? '' : 'WHERE p.status = 1';
 
     $sql = "
-            SELECT 
-                p.id,
-                p.title,
-                p.content,
-                p.youtube_url,  -- NUEVO CAMPO
-                p.status,
-                p.created_at,
-                p.updated_at,
-                COUNT(DISTINCT i.id) as total_images,
-                GROUP_CONCAT(DISTINCT i.filename ORDER BY i.sort_order) as image_files
-            FROM posts p
-            LEFT JOIN images_id i ON p.id = i.post_id AND i.status = 1
-            {$statusCondition}
-            GROUP BY p.id
-            ORDER BY p.created_at DESC
-        ";
+          SELECT 
+              p.id,
+              p.title,
+              p.content,
+              p.youtube_url,
+              p.status,
+              p.created_at,
+              p.updated_at,
+              COUNT(DISTINCT i.id) as total_images,
+              GROUP_CONCAT(DISTINCT CASE WHEN i.type = 'listing' THEN i.filename END) as listing_image,
+              GROUP_CONCAT(DISTINCT CASE WHEN i.type = 'header' THEN i.filename END) as header_image,
+              COUNT(CASE WHEN i.type = 'content' THEN 1 END) as content_images_count
+          FROM posts p
+          LEFT JOIN post_images i ON p.id = i.post_id AND i.status = 1
+          {$statusCondition}
+          GROUP BY p.id
+          ORDER BY p.created_at DESC
+      ";
 
     return $this->query($sql);
   }
 
   /**
-   * Obtener post completo con todas sus imágenes
+   * Obtener post completo con todas sus imágenes agrupadas por tipo 
    */
   public function getPostComplete($id)
   {
@@ -61,13 +63,48 @@ class Posts extends BaseCRUD
       return null;
     }
 
-    // Obtener imágenes (NO VIDEOS)
-    $images = $this->db->fetchAll(
-      "SELECT * FROM images_id WHERE post_id = :post_id AND status = 1 ORDER BY sort_order",
-      ['post_id' => $id]
-    );
+    // Obtener imágenes agrupadas por tipo
+    require_once 'PostImages.php';
+    $postImages = new PostImages();
+    $post['images'] = $postImages->getPostImagesByType($id);
 
-    $post['images'] = $images;
+    return $post;
+  }
+
+  /**
+   * Obtener post con imagen de listado para vista pública
+   */
+  public function getPostForListing($id)
+  {
+    $post = $this->getById($id);
+    if (!$post || $post['status'] != 1) {
+      return null;
+    }
+
+    // Obtener solo imagen de listado
+    require_once 'PostImages.php';
+    $postImages = new PostImages();
+    $listingImage = $postImages->getImageByType($id, 'listing');
+
+    $post['listing_image'] = $listingImage;
+
+    return $post;
+  }
+
+  /**
+   * Obtener post completo para vista pública
+   */
+  public function getPostForPublic($id)
+  {
+    $post = $this->getById($id);
+    if (!$post || $post['status'] != 1) {
+      return null;
+    }
+
+    // Obtener todas las imágenes por tipo
+    require_once 'PostImages.php';
+    $postImages = new PostImages();
+    $post['images'] = $postImages->getPostImagesByType($id, false); // Solo activas
 
     return $post;
   }
@@ -249,7 +286,7 @@ class Posts extends BaseCRUD
 
       // Eliminar imágenes asociadas
       $images = $this->db->fetchAll(
-        "SELECT * FROM images_id WHERE post_id = :post_id",
+        "SELECT * FROM post_images WHERE post_id = :post_id",
         ['post_id' => $id]
       );
 
@@ -263,7 +300,7 @@ class Posts extends BaseCRUD
 
       // Eliminar registros de imágenes
       $this->db->execute(
-        "DELETE FROM images_id WHERE post_id = :post_id",
+        "DELETE FROM post_images WHERE post_id = :post_id",
         ['post_id' => $id]
       );
 
@@ -282,5 +319,58 @@ class Posts extends BaseCRUD
       error_log("Error eliminando post: " . $e->getMessage());
       return ['success' => false, 'errors' => ['Error interno al eliminar el post']];
     }
+  }
+
+  /**
+   * Obtener posts activos para el front público con paginación opcional
+   */
+  public function getPostsForPublic($limit = null, $page = 1)
+  {
+    $sql = "
+          SELECT 
+              p.id,
+              p.title,
+              p.content,
+              p.youtube_url,
+              p.created_at,
+              p.updated_at,
+              COUNT(DISTINCT i.id) as total_images,
+              GROUP_CONCAT(DISTINCT CASE WHEN i.type = 'listing' THEN i.filename END) as listing_image,
+              GROUP_CONCAT(DISTINCT CASE WHEN i.type = 'header' THEN i.filename END) as header_image,
+              COUNT(CASE WHEN i.type = 'content' THEN 1 END) as content_images_count
+          FROM posts p
+          LEFT JOIN post_images i ON p.id = i.post_id AND i.status = 1
+          WHERE p.status = 1
+          GROUP BY p.id
+          ORDER BY p.created_at DESC
+      ";
+
+    // Agregar paginación si se especifica límite
+    if ($limit) {
+      $offset = ($page - 1) * $limit;
+      $sql .= " LIMIT {$limit} OFFSET {$offset}";
+    }
+
+    $posts = $this->query($sql);
+
+    // Si hay paginación, obtener total para metadatos
+    if ($limit) {
+      $totalPosts = $this->count('status = 1');
+      $totalPages = ceil($totalPosts / $limit);
+
+      return [
+        'data' => $posts,
+        'pagination' => [
+          'current_page' => $page,
+          'total_pages' => $totalPages,
+          'total_posts' => $totalPosts,
+          'per_page' => $limit,
+          'has_next' => $page < $totalPages,
+          'has_prev' => $page > 1
+        ]
+      ];
+    }
+
+    return $posts;
   }
 }

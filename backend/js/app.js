@@ -104,6 +104,141 @@ let app = new Vue({
   },
 
   methods: {
+    // === GESTIÓN DE IMÁGENES POR TIPO ===
+    openImageModal(postId, imageType = "content") {
+      this.currentPostId = postId;
+      this.currentImageType = imageType;
+
+      // Configurar títulos según tipo
+      const titles = {
+        listing: "Imagen para Listado (Cuadrada)",
+        header: "Imagen de Header (Horizontal)",
+        content: "Imágenes de Contenido",
+      };
+
+      this.imageModalTitle = titles[imageType] || "Subir Imagen";
+
+      // Resetear formulario
+      this.imageFormErrors = [];
+      document.getElementById("imageFile").value = "";
+      document.getElementById("imageAltText").value = "";
+
+      $("#imageModal").modal("show");
+    },
+
+    async uploadImage(e) {
+      e.preventDefault();
+
+      const formData = new FormData();
+      const fileInput = document.getElementById("imageFile");
+      const altText = document.getElementById("imageAltText").value;
+
+      if (!fileInput.files[0]) {
+        this.showError("Debe seleccionar una imagen");
+        return;
+      }
+
+      formData.append("post_id", this.currentPostId);
+      formData.append("image", fileInput.files[0]);
+      formData.append("type", this.currentImageType);
+      formData.append("alt_text", altText);
+
+      try {
+        this.showLoader();
+        const response = await axios.post(
+          window.APP_CONFIG.API_BASE_URL + "php/uploadImage.php",
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        if (response.data.success) {
+          this.showSuccess(["Imagen subida exitosamente"]);
+          $("#imageModal").modal("hide");
+          await this.loadPosts(); // Recargar lista
+        } else {
+          this.imageFormErrors = response.data.errors || [
+            "Error al subir imagen",
+          ];
+        }
+      } catch (error) {
+        this.showError(
+          "Error al subir imagen: " +
+            (error.response?.data?.message || error.message)
+        );
+      } finally {
+        this.hideLoader();
+      }
+    },
+
+    // Método para mostrar imágenes agrupadas por tipo
+    displayImagesByType(images) {
+      const container = document.getElementById("imagesContainer");
+      if (!container) return;
+
+      let html = "";
+
+      // Imagen de listado
+      if (images.listing && images.listing.length > 0) {
+        html += "<h6>Imagen de Listado:</h6>";
+        images.listing.forEach((img) => {
+          html += `<div class="image-item">
+        <img src="../${img.file_path}" alt="${img.alt_text}" style="width: 100px; height: 100px; object-fit: cover;">
+        <button onclick="app.deleteImage(${img.id})" class="btn btn-sm btn-danger">Eliminar</button>
+      </div>`;
+        });
+      }
+
+      // Imagen de header
+      if (images.header && images.header.length > 0) {
+        html += "<h6>Imagen de Header:</h6>";
+        images.header.forEach((img) => {
+          html += `<div class="image-item">
+        <img src="../${img.file_path}" alt="${img.alt_text}" style="width: 200px; height: 100px; object-fit: cover;">
+        <button onclick="app.deleteImage(${img.id})" class="btn btn-sm btn-danger">Eliminar</button>
+      </div>`;
+        });
+      }
+
+      // Imágenes de contenido
+      if (images.content && images.content.length > 0) {
+        html += "<h6>Imágenes de Contenido:</h6>";
+        images.content.forEach((img) => {
+          html += `<div class="image-item">
+        <img src="../${img.file_path}" alt="${img.alt_text}" style="width: 150px; height: 100px; object-fit: cover;">
+        <button onclick="app.deleteImage(${img.id})" class="btn btn-sm btn-danger">Eliminar</button>
+      </div>`;
+        });
+      }
+
+      container.innerHTML = html;
+    },
+
+    async deleteImage(imageId) {
+      if (!confirm("¿Está seguro de eliminar esta imagen?")) return;
+
+      try {
+        this.showLoader();
+        const response = await axios.post(
+          window.APP_CONFIG.API_BASE_URL + "php/deleteImage.php",
+          { id: imageId }
+        );
+
+        if (response.data.success) {
+          this.showSuccess(["Imagen eliminada exitosamente"]);
+          await this.loadPosts(); // Recargar lista
+        } else {
+          this.showError("Error al eliminar imagen");
+        }
+      } catch (error) {
+        this.showError("Error al eliminar imagen: " + error.message);
+      } finally {
+        this.hideLoader();
+      }
+    },
     // === GESTIÓN DE TRABAJOS ===
 
     async getJobs() {

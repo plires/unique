@@ -301,7 +301,7 @@ let postsApp = new Vue({
       }
     },
 
-    // === GESTIÓN DE MEDIOS (SOLO IMÁGENES) ===
+    // === GESTIÓN DE MEDIOS ===
     async manageMedia(postId) {
       const postData = await this.loadPostComplete(postId);
       if (!postData) return;
@@ -309,13 +309,13 @@ let postsApp = new Vue({
       this.currentMediaPost = {
         id: postData.id,
         title: postData.title,
-        images: postData.images || [],
-        // videos: postData.videos || [], // ELIMINADO
+        images: postData.images || { listing: [], header: [], content: [] },
       };
 
+      // Resetear formulario de nueva imagen
       this.newImage = {
+        type: "content",
         alt_text: "",
-        caption: "",
       };
 
       $("#mediaModal").modal("show");
@@ -330,14 +330,28 @@ let postsApp = new Vue({
         return;
       }
 
+      // Validar límites por tipo
+      const type = this.newImage.type;
+      const currentImages = this.currentMediaPost.images[type] || [];
+
+      if (
+        (type === "listing" || type === "header") &&
+        currentImages.length >= 1
+      ) {
+        this.showError(
+          `Solo se permite una imagen de tipo ${
+            type === "listing" ? "listado" : "header"
+          } por post`
+        );
+        return;
+      }
+
       const formData = new FormData();
       formData.append("post_id", this.currentMediaPost.id);
       formData.append("image", fileInput.files[0]);
+      formData.append("type", this.newImage.type);
       if (this.newImage.alt_text) {
         formData.append("alt_text", this.newImage.alt_text);
-      }
-      if (this.newImage.caption) {
-        formData.append("caption", this.newImage.caption);
       }
 
       try {
@@ -360,12 +374,16 @@ let postsApp = new Vue({
           this.currentMediaPost.id
         );
         if (updatedPost) {
-          this.currentMediaPost.images = updatedPost.images || [];
+          this.currentMediaPost.images = updatedPost.images || {
+            listing: [],
+            header: [],
+            content: [],
+          };
         }
 
         // Limpiar formulario
         fileInput.value = "";
-        this.newImage = { alt_text: "", caption: "" };
+        this.newImage = { type: "content", alt_text: "" };
       } catch (error) {
         this.showError(
           "Error al subir imagen: " +
@@ -397,8 +415,15 @@ let postsApp = new Vue({
           this.currentMediaPost.id
         );
         if (updatedPost) {
-          this.currentMediaPost.images = updatedPost.images || [];
+          this.currentMediaPost.images = updatedPost.images || {
+            listing: [],
+            header: [],
+            content: [],
+          };
         }
+
+        // Recargar lista de posts
+        await this.loadPosts();
       } catch (error) {
         this.showError(
           "Error al eliminar imagen: " +

@@ -1,13 +1,12 @@
 <?php
 
 /**
- * API para subir imágenes a posts
+ * API para subir imágenes de posts
  */
 
 require_once('../../includes/config.inc.php');
 require_once('../../clases/PostImages.php');
 require_once('../../clases/ResponseHelper.php');
-require_once('../../clases/Posts.php');
 
 // Verificar que sea POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -15,52 +14,38 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
-  // Validar parámetros
+  // Validar campos requeridos
   if (empty($_POST['post_id'])) {
     ResponseHelper::error('ID de post es requerido');
   }
 
-  if (empty($_FILES['image'])) {
-    ResponseHelper::error('Archivo de imagen es requerido');
+  if (!isset($_FILES['image'])) {
+    ResponseHelper::error('Debe seleccionar una imagen');
   }
 
   $postId = (int)$_POST['post_id'];
-  $file = $_FILES['image'];
+  $imageType = $_POST['type'] ?? 'content';
+  $altText = $_POST['alt_text'] ?? '';
 
-  // Datos adicionales opcionales
-  $imageData = [];
-  if (!empty($_POST['alt_text'])) {
-    $imageData['alt_text'] = $_POST['alt_text'];
-  }
-  if (!empty($_POST['caption'])) {
-    $imageData['caption'] = $_POST['caption'];
-  }
-  if (isset($_POST['is_featured'])) {
-    $imageData['is_featured'] = (int)$_POST['is_featured'];
+  // Validar tipo de imagen
+  if (!in_array($imageType, ['listing', 'header', 'content'])) {
+    ResponseHelper::error('Tipo de imagen inválido');
   }
 
-  $imagesModel = new PostImages();
+  $postImages = new PostImages();
 
-  // Verificar que el post existe
-  $postsModel = new Posts();
-  if (!$postsModel->exists($postId)) {
-    ResponseHelper::notFound('El post no existe');
-  }
+  // Datos adicionales de la imagen
+  $imageData = [
+    'type' => $imageType,
+    'alt_text' => $altText
+  ];
 
-  $result = $imagesModel->uploadImage($postId, $file, $imageData);
+  $result = $postImages->uploadImage($postId, $_FILES['image'], $imageData);
 
   if ($result['success']) {
-    ResponseHelper::success(
-      [
-        'id' => $result['id'],
-        'filename' => $result['filename'],
-        'file_path' => $result['file_path']
-      ],
-      'Imagen subida exitosamente',
-      201
-    );
+    ResponseHelper::success($result, 'Imagen subida exitosamente');
   } else {
-    ResponseHelper::validationError($result['errors']);
+    ResponseHelper::error('Error al subir imagen', $result['errors']);
   }
 } catch (Exception $e) {
   error_log("Error en uploadImage.php: " . $e->getMessage());

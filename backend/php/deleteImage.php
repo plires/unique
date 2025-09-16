@@ -19,9 +19,9 @@ try {
   }
 
   $id = (int)$_POST['id'];
-  $imagesModel = new PostImages();
+  $postImages = new PostImages();
 
-  $result = $imagesModel->deleteImage($id);
+  $result = $postImages->deleteImage($id);
 
   if ($result['success']) {
     ResponseHelper::success(null, 'Imagen eliminada exitosamente');

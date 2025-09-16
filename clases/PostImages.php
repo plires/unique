@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Modelo para la gestión de Imágenes de Posts
+ * Modelo para la gestión de Imágenes de Posts - VERSIÓN ACTUALIZADA
  */
 
 require_once 'BaseCRUD.php';
@@ -12,29 +12,23 @@ class PostImages extends BaseCRUD
   protected $fillable = [
     'post_id',
     'filename',
-    'original_name',
     'file_path',
-    'file_size',
-    'mime_type',
     'alt_text',
-    'caption',
+    'type',        // NUEVO CAMPO
     'sort_order',
     'is_featured',
-    'status',
-    'image_size',  // AGREGAR
-    'width',       // AGREGAR
-    'height'       // AGREGAR
+    'status'
   ];
 
   protected $timestamps = true;
 
   public function __construct()
   {
-    parent::__construct('images_id');
+    parent::__construct('post_images'); // TABLA RENOMBRADA
   }
 
   /**
-   * Subir y guardar imagen
+   * Subir y guardar imagen con validación por tipo
    */
   public function uploadImage($postId, $file, $imageData = [])
   {
@@ -46,6 +40,18 @@ class PostImages extends BaseCRUD
       return ['success' => false, 'errors' => $validation['errors']];
     }
 
+    // Validar tipo de imagen
+    $type = $imageData['type'] ?? 'content';
+    if (!in_array($type, ['listing', 'header', 'content'])) {
+      return ['success' => false, 'errors' => ['Tipo de imagen inválido']];
+    }
+
+    // Validar límites por tipo
+    $validationResult = $this->validateImageTypeLimit($postId, $type);
+    if (!$validationResult['valid']) {
+      return ['success' => false, 'errors' => $validationResult['errors']];
+    }
+
     try {
       // Crear directorio si no existe
       $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/' . UPLOAD_PATH_IMAGES;
@@ -55,124 +61,70 @@ class PostImages extends BaseCRUD
 
       // Generar nombre único
       $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-      $filename = uniqid('img_') . '_' . time() . '.' . $extension;
-      $tempPath = $uploadDir . 'temp_' . $filename;
+      $filename = uniqid($type . '_') . '_' . time() . '.' . $extension;
+      $filepath = $uploadDir . $filename;
 
-      error_log("Subiendo archivo temporal a: " . $tempPath);
+      error_log("Subiendo archivo a: " . $filepath);
 
-      // Mover archivo temporalmente
-      if (!move_uploaded_file($file['tmp_name'], $tempPath)) {
+      // Mover archivo
+      if (!move_uploaded_file($file['tmp_name'], $filepath)) {
         return ['success' => false, 'errors' => ['Error al subir el archivo']];
       }
 
-      $savedImages = [];
+      // Guardar en base de datos
+      $imageRecord = [
+        'post_id' => $postId,
+        'filename' => $filename,
+        'file_path' => UPLOAD_PATH_IMAGES . $filename,
+        'alt_text' => $imageData['alt_text'] ?? '',
+        'type' => $type,
+        'sort_order' => $this->getNextSortOrder($postId, $type),
+        'is_featured' => ($type === 'listing') ? 1 : 0, // Solo listing puede ser featured por defecto
+        'status' => 1
+      ];
 
-      // SI tienes ImageManager instalado, usar optimización
-      if (class_exists('ImageManager') && defined('IMAGE_SIZES')) {
-        error_log("Usando ImageManager para procesamiento múltiple");
-        require_once 'ImageManager.php';
+      $imageId = $this->create($imageRecord);
 
-        $imageManager = new ImageManager();
-        $result = $imageManager->processImage($tempPath, $filename, $imageData);
-
-        // Limpiar archivo temporal
-        @unlink($tempPath);
-
-        if (!$result['success']) {
-          error_log("Error en ImageManager: " . $result['error']);
-          return ['success' => false, 'errors' => [$result['error']]];
-        }
-
-        error_log("ImageManager procesó " . count($result['images']) . " tamaños");
-
-        // GUARDAR TODAS LAS IMÁGENES GENERADAS EN LA BD
-        foreach ($result['images'] as $sizeName => $imageInfo) {
-          error_log("Guardando en BD: " . $sizeName . " - " . $imageInfo['filename']);
-
-          $nextOrder = $this->getNextSortOrder($postId);
-
-          $sizeImageData = array_merge([
-            'post_id' => $postId,
-            'filename' => $imageInfo['filename'],
-            'original_name' => $file['name'],
-            'file_path' => $imageInfo['path'],
-            'file_size' => $imageInfo['size'],
-            'mime_type' => $file['type'],
-            'image_size' => $sizeName,  // CRÍTICO: Guardar el tamaño
-            'width' => $imageInfo['width'],
-            'height' => $imageInfo['height'],
-            'sort_order' => $nextOrder,
-            'status' => 1
-          ], $imageData);
-
-          $imageId = $this->create($sizeImageData);
-
-          if ($imageId) {
-            error_log("Imagen guardada en BD con ID: " . $imageId);
-            $savedImages[$sizeName] = [
-              'id' => $imageId,
-              'filename' => $imageInfo['filename'],
-              'path' => $imageInfo['path'],
-              'size' => $sizeName
-            ];
-          } else {
-            error_log("ERROR: No se pudo guardar imagen en BD para tamaño: " . $sizeName);
-          }
-        }
-      } else {
-        error_log("Fallback: No se encontró ImageManager o IMAGE_SIZES no definido");
-
-        // Fallback: usar imagen original sin optimizar
-        $finalPath = $uploadDir . $filename;
-        rename($tempPath, $finalPath);
-
-        $nextOrder = $this->getNextSortOrder($postId);
-        $relativePath = UPLOAD_PATH_IMAGES . $filename;
-
-        $originalImageData = array_merge([
-          'post_id' => $postId,
-          'filename' => $filename,
-          'original_name' => $file['name'],
-          'file_path' => $relativePath,
-          'file_size' => filesize($finalPath),
-          'mime_type' => $file['type'],
-          'image_size' => 'original',
-          'width' => 0,
-          'height' => 0,
-          'sort_order' => $nextOrder,
-          'status' => 1
-        ], $imageData);
-
-        $imageId = $this->create($originalImageData);
-
-        if ($imageId) {
-          $savedImages['original'] = [
-            'id' => $imageId,
-            'filename' => $filename,
-            'path' => $relativePath,
-            'size' => 'original'
-          ];
-        }
-      }
-
-      error_log("=== RESULTADO FINAL ===");
-      error_log("Imágenes guardadas en BD: " . count($savedImages));
-
-      if (!empty($savedImages)) {
+      if ($imageId) {
+        error_log("Imagen guardada con ID: " . $imageId);
         return [
           'success' => true,
-          'images_created' => count($savedImages),
-          'images' => $savedImages,
-          'main_image' => reset($savedImages) // Primera imagen como principal
+          'image_id' => $imageId,
+          'filename' => $filename,
+          'file_path' => UPLOAD_PATH_IMAGES . $filename
         ];
       } else {
-        return ['success' => false, 'errors' => ['Error al guardar las imágenes en base de datos']];
+        // Si falla la BD, eliminar archivo
+        @unlink($filepath);
+        return ['success' => false, 'errors' => ['Error al guardar en base de datos']];
       }
     } catch (Exception $e) {
-      error_log("ERROR CRÍTICO en uploadImage: " . $e->getMessage());
-      error_log("Stack trace: " . $e->getTraceAsString());
-      return ['success' => false, 'errors' => ['Error interno al subir imagen']];
+      error_log("Error subiendo imagen: " . $e->getMessage());
+      return ['success' => false, 'errors' => ['Error interno: ' . $e->getMessage()]];
     }
+  }
+
+  /**
+   * Validar límites por tipo de imagen
+   */
+  private function validateImageTypeLimit($postId, $type)
+  {
+    $errors = [];
+
+    if ($type === 'listing') {
+      $existing = $this->count("post_id = :post_id AND type = 'listing' AND status = 1", ['post_id' => $postId]);
+      if ($existing >= 1) {
+        $errors[] = 'Solo se permite una imagen para listado por post';
+      }
+    } elseif ($type === 'header') {
+      $existing = $this->count("post_id = :post_id AND type = 'header' AND status = 1", ['post_id' => $postId]);
+      if ($existing >= 1) {
+        $errors[] = 'Solo se permite una imagen de header por post';
+      }
+    }
+    // 'content' permite múltiples imágenes
+
+    return ['valid' => empty($errors), 'errors' => $errors];
   }
 
   /**
@@ -182,9 +134,8 @@ class PostImages extends BaseCRUD
   {
     $errors = [];
 
-    // Verificar errores de subida
-    if ($file['error'] !== UPLOAD_ERR_OK) {
-      $errors[] = 'Error al subir el archivo';
+    if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+      $errors[] = 'No se ha subido ningún archivo válido';
       return ['valid' => false, 'errors' => $errors];
     }
 
@@ -211,9 +162,9 @@ class PostImages extends BaseCRUD
   }
 
   /**
-   * Obtener imágenes de un post
+   * Obtener imágenes de un post agrupadas por tipo
    */
-  public function getPostImages($postId, $includeInactive = false)
+  public function getPostImagesByType($postId, $includeInactive = false)
   {
     $conditions = ['post_id = :post_id'];
     $params = ['post_id' => $postId];
@@ -223,74 +174,35 @@ class PostImages extends BaseCRUD
     }
 
     $where = implode(' AND ', $conditions);
-    return $this->getWhere($where, $params, 'sort_order', 'ASC');
+    $images = $this->getWhere($where, $params, 'type, sort_order', 'ASC');
+
+    // Agrupar por tipo
+    $grouped = [
+      'listing' => [],
+      'header' => [],
+      'content' => []
+    ];
+
+    foreach ($images as $image) {
+      $grouped[$image['type']][] = $image;
+    }
+
+    return $grouped;
   }
 
   /**
-   * Obtener imagen destacada de un post
+   * Obtener imagen específica por tipo
    */
-  public function getFeaturedImage($postId)
+  public function getImageByType($postId, $type)
   {
-    return $this->db->fetch(
-      "SELECT * FROM images_id WHERE post_id = :post_id AND is_featured = 1 AND status = 1",
-      ['post_id' => $postId]
+    return $this->queryOne(
+      "SELECT * FROM post_images WHERE post_id = :post_id AND type = :type AND status = 1 ORDER BY sort_order LIMIT 1",
+      ['post_id' => $postId, 'type' => $type]
     );
   }
 
   /**
-   * Establecer imagen destacada
-   */
-  public function setFeaturedImage($postId, $imageId)
-  {
-    try {
-      $this->db->beginTransaction();
-
-      // Quitar featured de todas las imágenes del post
-      $this->db->execute(
-        "UPDATE images_id SET is_featured = 0 WHERE post_id = :post_id",
-        ['post_id' => $postId]
-      );
-
-      // Establecer la nueva imagen destacada
-      $success = $this->update($imageId, ['is_featured' => 1]);
-
-      if ($success) {
-        $this->db->commit();
-        return ['success' => true];
-      } else {
-        $this->db->rollback();
-        return ['success' => false, 'errors' => ['Error al establecer imagen destacada']];
-      }
-    } catch (Exception $e) {
-      $this->db->rollback();
-      error_log("Error estableciendo imagen destacada: " . $e->getMessage());
-      return ['success' => false, 'errors' => ['Error interno']];
-    }
-  }
-
-  /**
-   * Actualizar orden de las imágenes
-   */
-  public function updateSortOrder($imageIds)
-  {
-    try {
-      $this->db->beginTransaction();
-
-      foreach ($imageIds as $order => $imageId) {
-        $this->update($imageId, ['sort_order' => $order + 1]);
-      }
-
-      $this->db->commit();
-      return ['success' => true];
-    } catch (Exception $e) {
-      $this->db->rollback();
-      error_log("Error actualizando orden: " . $e->getMessage());
-      return ['success' => false, 'errors' => ['Error al actualizar orden']];
-    }
-  }
-
-  /**
-   * Eliminar imagen
+   * Eliminar imagen con archivo físico
    */
   public function deleteImage($id)
   {
@@ -299,7 +211,7 @@ class PostImages extends BaseCRUD
       return ['success' => false, 'errors' => ['Imagen no encontrada']];
     }
 
-    // CAMBIO: Construir ruta absoluta para eliminar archivo físico
+    // Eliminar archivo físico
     $absolutePath = $_SERVER['DOCUMENT_ROOT'] . '/' . $image['file_path'];
 
     if (file_exists($absolutePath)) {
@@ -327,7 +239,7 @@ class PostImages extends BaseCRUD
    */
   public function updateImageInfo($id, $data)
   {
-    $allowedFields = ['alt_text', 'caption', 'sort_order', 'is_featured', 'status'];
+    $allowedFields = ['alt_text', 'sort_order', 'is_featured', 'status'];
     $updateData = [];
 
     foreach ($allowedFields as $field) {
@@ -350,16 +262,83 @@ class PostImages extends BaseCRUD
   }
 
   /**
-   * Obtener siguiente número de orden
+   * Obtener siguiente número de orden por tipo
    */
-  private function getNextSortOrder($postId)
+  private function getNextSortOrder($postId, $type)
   {
-    $result = $this->db->fetch(
-      "SELECT COALESCE(MAX(sort_order), 0) + 1 as next_order FROM images_id WHERE post_id = :post_id",
-      ['post_id' => $postId]
+    $result = $this->queryOne(
+      "SELECT COALESCE(MAX(sort_order), 0) + 1 as next_order FROM post_images WHERE post_id = :post_id AND type = :type",
+      ['post_id' => $postId, 'type' => $type]
     );
 
     return $result['next_order'];
+  }
+
+  /**
+   * Establecer imagen destacada (solo para tipo 'listing')
+   */
+  public function setFeaturedImage($postId, $imageId)
+  {
+    try {
+      $this->db->beginTransaction();
+
+      // Verificar que la imagen sea de tipo 'listing'
+      $image = $this->getById($imageId);
+      if (!$image || $image['type'] !== 'listing') {
+        $this->db->rollback();
+        return ['success' => false, 'errors' => ['Solo las imágenes de listado pueden ser destacadas']];
+      }
+
+      // Quitar featured de todas las imágenes de listing del post
+      $this->db->execute(
+        "UPDATE post_images SET is_featured = 0 WHERE post_id = :post_id AND type = 'listing'",
+        ['post_id' => $postId]
+      );
+
+      // Establecer la nueva imagen destacada
+      $success = $this->update($imageId, ['is_featured' => 1]);
+
+      if ($success) {
+        $this->db->commit();
+        return ['success' => true];
+      } else {
+        $this->db->rollback();
+        return ['success' => false, 'errors' => ['Error al establecer imagen destacada']];
+      }
+    } catch (Exception $e) {
+      $this->db->rollback();
+      error_log("Error estableciendo imagen destacada: " . $e->getMessage());
+      return ['success' => false, 'errors' => ['Error interno']];
+    }
+  }
+
+  /**
+   * Actualizar orden de las imágenes por tipo
+   */
+  public function updateSortOrder($imageIds, $type = null)
+  {
+    try {
+      $this->db->beginTransaction();
+
+      foreach ($imageIds as $order => $imageId) {
+        // Verificar tipo si se especifica
+        if ($type) {
+          $image = $this->getById($imageId);
+          if ($image['type'] !== $type) {
+            continue; // Saltar si no es del tipo correcto
+          }
+        }
+
+        $this->update($imageId, ['sort_order' => $order + 1]);
+      }
+
+      $this->db->commit();
+      return ['success' => true];
+    } catch (Exception $e) {
+      $this->db->rollback();
+      error_log("Error actualizando orden: " . $e->getMessage());
+      return ['success' => false, 'errors' => ['Error al actualizar orden']];
+    }
   }
 
   /**
@@ -369,52 +348,16 @@ class PostImages extends BaseCRUD
   {
     $total = $this->count();
     $active = $this->count('status = 1');
-    $featured = $this->count('is_featured = 1 AND status = 1');
-
-    $sizeStats = $this->db->fetch(
-      "SELECT 
-                COUNT(*) as total_files,
-                SUM(file_size) as total_size,
-                AVG(file_size) as avg_size,
-                MAX(file_size) as max_size
-            FROM images_id 
-            WHERE status = 1"
-    );
+    $byType = [
+      'listing' => $this->count("type = 'listing' AND status = 1"),
+      'header' => $this->count("type = 'header' AND status = 1"),
+      'content' => $this->count("type = 'content' AND status = 1")
+    ];
 
     return [
       'total' => $total,
       'active' => $active,
-      'featured' => $featured,
-      'size_stats' => $sizeStats
+      'by_type' => $byType
     ];
-  }
-
-  /**
-   * Obtener imagen específica por tamaño
-   */
-  public function getImageBySize($postId, $size = 'large')
-  {
-    return $this->db->fetch(
-      "SELECT * FROM images_id WHERE post_id = :post_id AND image_size = :size AND status = 1",
-      ['post_id' => $postId, 'size' => $size]
-    );
-  }
-
-  /**
-   * Obtener todas las imágenes de un post agrupadas por tamaño
-   */
-  public function getImagesBySizes($postId)
-  {
-    $images = $this->db->fetchAll(
-      "SELECT * FROM images_id WHERE post_id = :post_id AND status = 1 ORDER BY sort_order, image_size",
-      ['post_id' => $postId]
-    );
-
-    $grouped = [];
-    foreach ($images as $image) {
-      $grouped[$image['image_size']][] = $image;
-    }
-
-    return $grouped;
   }
 }
