@@ -101,11 +101,6 @@ if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
-// === CONFIGURACIÓN ESPECÍFICA PARA VIDEOS DE POSTS ===
-define('UPLOAD_PATH_VIDEOS', env('UPLOAD_PATH_VIDEOS', 'uploads/videos/'));
-define('MAX_VIDEO_SIZE', env('MAX_VIDEO_SIZE', 104857600)); // 100MB por defecto
-define('ALLOWED_VIDEO_TYPES', env('ALLOWED_VIDEO_TYPES', 'mp4,avi,mov,wmv,flv,webm'));
-
 // === MANEJO DE ERRORES ===
 define('APP_DEBUG', env('APP_DEBUG', false));
 
