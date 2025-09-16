@@ -19,22 +19,25 @@ let postsApp = new Vue({
       id: null,
       title: "",
       content: "",
-      youtube_url: "", // NUEVO CAMPO
+      youtube_url: "",
       active: true,
     },
     formErrors: [],
-    youtubePreview: false, // NUEVO CAMPO
+    youtubePreview: false,
 
-    // Modal de Medios (SOLO IMÁGENES)
+    // Modal de Medios
     currentMediaPost: {
       id: null,
       title: "",
-      images: [],
-      // videos: [], // ELIMINADO
+      images: {
+        listing: [],
+        header: [],
+        content: [],
+      },
     },
     newImage: {
+      type: "content",
       alt_text: "",
-      caption: "",
     },
 
     // Eliminación
@@ -303,14 +306,39 @@ let postsApp = new Vue({
 
     // === GESTIÓN DE MEDIOS ===
     async manageMedia(postId) {
+      console.log("=== INICIO manageMedia ===");
+      console.log("Post ID recibido:", postId);
+
+      // Validar que el ID sea válido
+      if (!postId || postId === null || postId === undefined) {
+        console.error("ID de post inválido:", postId);
+        this.showError("Error: ID de post inválido");
+        return;
+      }
+
       const postData = await this.loadPostComplete(postId);
-      if (!postData) return;
+      console.log("Post data cargado:", postData);
+
+      if (!postData) {
+        console.error("No se pudo cargar el post con ID:", postId);
+        return;
+      }
+
+      // Asegurar estructura correcta de imágenes
+      const images = postData.images || {
+        listing: [],
+        header: [],
+        content: [],
+      };
+      console.log("Imágenes estructuradas:", images);
 
       this.currentMediaPost = {
         id: postData.id,
         title: postData.title,
-        images: postData.images || { listing: [], header: [], content: [] },
+        images: images,
       };
+
+      console.log("currentMediaPost configurado:", this.currentMediaPost);
 
       // Resetear formulario de nueva imagen
       this.newImage = {
@@ -318,11 +346,16 @@ let postsApp = new Vue({
         alt_text: "",
       };
 
+      console.log("=== manageMedia completado ===");
       $("#mediaModal").modal("show");
     },
 
     async uploadImage(e) {
       e.preventDefault();
+
+      console.log("=== INICIO uploadImage ===");
+      console.log("currentMediaPost:", this.currentMediaPost);
+      console.log("newImage:", this.newImage);
 
       const fileInput = this.$refs.imageFile;
       if (!fileInput.files.length) {
@@ -330,9 +363,35 @@ let postsApp = new Vue({
         return;
       }
 
+      // VALIDACIÓN CRÍTICA: Verificar que currentMediaPost.id existe y es válido
+      if (!this.currentMediaPost || !this.currentMediaPost.id) {
+        console.error("ERROR CRÍTICO: currentMediaPost.id no está definido");
+        console.error("currentMediaPost:", this.currentMediaPost);
+        this.showError(
+          "Error: No se puede identificar el post. Cierre y vuelva a abrir el modal."
+        );
+        return;
+      }
+
+      console.log("ID del post validado:", this.currentMediaPost.id);
+
+      // Validar que las imágenes tengan la estructura correcta
+      if (
+        !this.currentMediaPost.images ||
+        typeof this.currentMediaPost.images !== "object"
+      ) {
+        console.error("ERROR: Estructura de imágenes incorrecta");
+        this.currentMediaPost.images = { listing: [], header: [], content: [] };
+      }
+
       // Validar límites por tipo
       const type = this.newImage.type;
       const currentImages = this.currentMediaPost.images[type] || [];
+
+      console.log(
+        `Validando tipo ${type}, imágenes actuales:`,
+        currentImages.length
+      );
 
       if (
         (type === "listing" || type === "header") &&
@@ -354,10 +413,12 @@ let postsApp = new Vue({
         formData.append("alt_text", this.newImage.alt_text);
       }
 
+      console.log("FormData preparado para post_id:", this.currentMediaPost.id);
+
       try {
         this.showLoader();
 
-        await axios.post(
+        const uploadResponse = await axios.post(
           window.APP_CONFIG.API_BASE_URL + "php/uploadImage.php",
           formData,
           {
@@ -367,24 +428,46 @@ let postsApp = new Vue({
           }
         );
 
+        console.log("Upload response:", uploadResponse.data);
+
         this.showSuccess("Imagen subida exitosamente");
 
+        // VALIDACIÓN CRÍTICA: Asegurar que el ID sigue siendo válido antes de recargar
+        const postIdToReload = this.currentMediaPost.id;
+        console.log("Recargando post con ID:", postIdToReload);
+
+        if (!postIdToReload) {
+          console.error("ERROR: ID de post perdido durante el upload");
+          this.showError(
+            "Error: Se perdió la referencia del post. Cierre y vuelva a abrir el modal."
+          );
+          return;
+        }
+
         // Recargar datos del post
-        const updatedPost = await this.loadPostComplete(
-          this.currentMediaPost.id
-        );
+        const updatedPost = await this.loadPostComplete(postIdToReload);
         if (updatedPost) {
+          console.log("Post actualizado recibido:", updatedPost);
+
           this.currentMediaPost.images = updatedPost.images || {
             listing: [],
             header: [],
             content: [],
           };
+
+          console.log("Imágenes actualizadas:", this.currentMediaPost.images);
+        } else {
+          console.error("No se pudo recargar el post actualizado");
+          // No mostrar error al usuario, ya que la imagen se subió correctamente
         }
 
         // Limpiar formulario
         fileInput.value = "";
         this.newImage = { type: "content", alt_text: "" };
+
+        console.log("=== uploadImage completado ===");
       } catch (error) {
+        console.error("Error en upload:", error);
         this.showError(
           "Error al subir imagen: " +
             (error.response?.data?.message || error.message)
@@ -396,6 +479,21 @@ let postsApp = new Vue({
 
     async deleteImage(imageId) {
       if (!confirm("¿Está seguro de eliminar esta imagen?")) return;
+
+      console.log("=== INICIO deleteImage ===");
+      console.log("Image ID:", imageId);
+      console.log("currentMediaPost:", this.currentMediaPost);
+
+      // Validar que tenemos un ID de post válido
+      if (!this.currentMediaPost || !this.currentMediaPost.id) {
+        console.error(
+          "ERROR: currentMediaPost.id no está definido en deleteImage"
+        );
+        this.showError(
+          "Error: No se puede identificar el post. Cierre y vuelva a abrir el modal."
+        );
+        return;
+      }
 
       const formData = new FormData();
       formData.append("id", imageId);
@@ -410,21 +508,26 @@ let postsApp = new Vue({
 
         this.showSuccess("Imagen eliminada exitosamente");
 
-        // Recargar datos del post
-        const updatedPost = await this.loadPostComplete(
-          this.currentMediaPost.id
-        );
+        // Recargar datos del post con ID validado
+        const postIdToReload = this.currentMediaPost.id;
+        console.log("Recargando post después de eliminar, ID:", postIdToReload);
+
+        const updatedPost = await this.loadPostComplete(postIdToReload);
         if (updatedPost) {
           this.currentMediaPost.images = updatedPost.images || {
             listing: [],
             header: [],
             content: [],
           };
+          console.log("Post recargado después de eliminar");
         }
 
         // Recargar lista de posts
         await this.loadPosts();
+
+        console.log("=== deleteImage completado ===");
       } catch (error) {
+        console.error("Error en deleteImage:", error);
         this.showError(
           "Error al eliminar imagen: " +
             (error.response?.data?.message || error.message)

@@ -81,6 +81,29 @@ define('MAX_IMAGE_SIZE', env('MAX_IMAGE_SIZE', 10485760)); // 10MB por defecto
 define('ALLOWED_IMAGE_TYPES', env('ALLOWED_IMAGE_TYPES', 'jpg,jpeg,png,gif,webp'));
 
 // === CONFIGURACIÓN AVANZADA DE IMÁGENES ===
+// Configuración para tipos específicos de imágenes
+define('IMAGE_SIZES_BY_TYPE', json_encode([
+  'listing' => [
+    'width' => 600,
+    'height' => 600,
+    'crop' => true,
+    'quality' => 85
+  ],
+  'header' => [
+    'width' => 1920,
+    'height' => 750,
+    'crop' => true,
+    'quality' => 85
+  ],
+  'content' => [
+    'width' => 1140,
+    'height' => 500,
+    'crop' => true,
+    'quality' => 85
+  ]
+]));
+
+// Configuración general de imágenes 
 define('IMAGE_SIZES', env('IMAGE_SIZES', 'thumbnail:300x300,medium:800x600,large:1200x800'));
 define('IMAGE_QUALITY_JPG', env('IMAGE_QUALITY_JPG', 85));
 define('IMAGE_QUALITY_PNG', env('IMAGE_QUALITY_PNG', 90));

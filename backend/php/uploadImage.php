@@ -1,7 +1,7 @@
 <?php
 
 /**
- * API para subir imágenes de posts
+ * API para subir imágenes de posts - CON OPTIMIZACIÓN AUTOMÁTICA
  */
 
 require_once('../../includes/config.inc.php');
@@ -29,8 +29,13 @@ try {
 
   // Validar tipo de imagen
   if (!in_array($imageType, ['listing', 'header', 'content'])) {
-    ResponseHelper::error('Tipo de imagen inválido');
+    ResponseHelper::error('Tipo de imagen inválido. Tipos permitidos: listing, header, content');
   }
+
+  error_log("=== INICIO UPLOAD API ===");
+  error_log("Post ID: " . $postId);
+  error_log("Tipo: " . $imageType);
+  error_log("Archivo: " . $_FILES['image']['name']);
 
   $postImages = new PostImages();
 
@@ -43,11 +48,28 @@ try {
   $result = $postImages->uploadImage($postId, $_FILES['image'], $imageData);
 
   if ($result['success']) {
-    ResponseHelper::success($result, 'Imagen subida exitosamente');
+    error_log("Upload exitoso: " . print_r($result, true));
+
+    // Preparar respuesta con información de optimización
+    $responseData = [
+      'image_id' => $result['image_id'],
+      'filename' => $result['filename'],
+      'file_path' => $result['file_path'],
+      'width' => $result['width'] ?? null,
+      'height' => $result['height'] ?? null,
+      'size' => $result['size'] ?? null,
+      'format' => $result['format'] ?? 'webp',
+      'type' => $result['type'],
+      'optimized' => $result['optimized'] ?? false
+    ];
+
+    ResponseHelper::success($responseData, 'Imagen subida y optimizada exitosamente');
   } else {
+    error_log("Error en upload: " . print_r($result['errors'], true));
     ResponseHelper::error('Error al subir imagen', $result['errors']);
   }
 } catch (Exception $e) {
   error_log("Error en uploadImage.php: " . $e->getMessage());
+  error_log("Stack trace: " . $e->getTraceAsString());
   ResponseHelper::serverError('Error al procesar la solicitud');
 }

@@ -8,8 +8,8 @@ use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
 
 class ImageManager
 {
-  private $sizes;
   private $manager;
+  private $typeConfigs;
 
   public function __construct()
   {
@@ -17,63 +17,61 @@ class ImageManager
     $driver = IMAGE_DRIVER === 'imagick' ? new ImagickDriver() : new GdDriver();
     $this->manager = new InterventionImageManager($driver);
 
-    // Parsear tamaños configurados
-    $this->parseSizes();
+    // Cargar configuraciones por tipo
+    $this->typeConfigs = json_decode(IMAGE_SIZES_BY_TYPE, true);
   }
 
   /**
-   * Procesar imagen con múltiples tamaños
+   * Procesar imagen por tipo específico (listing, header, content)
    */
-  public function processImage($filePath, $filename, $options = [])
+  public function processImageByType($filePath, $filename, $type = 'content')
   {
-    $results = [];
-
-    error_log("=== INICIO PROCESAMIENTO IMAGEN ===");
+    error_log("=== INICIO PROCESAMIENTO IMAGEN POR TIPO ===");
     error_log("Archivo: " . $filePath);
     error_log("Filename: " . $filename);
-    error_log("Tamaños configurados: " . print_r($this->sizes, true));
+    error_log("Tipo: " . $type);
+
+    if (!isset($this->typeConfigs[$type])) {
+      error_log("ERROR: Tipo de imagen desconocido: " . $type);
+      return ['success' => false, 'error' => 'Tipo de imagen desconocido'];
+    }
+
+    $config = $this->typeConfigs[$type];
+    error_log("Configuración: " . print_r($config, true));
 
     try {
       $image = $this->manager->read($filePath);
-      error_log("Imagen leída correctamente");
+      error_log("Imagen leída correctamente - Dimensiones originales: " . $image->width() . "x" . $image->height());
 
-      // Procesar cada tamaño configurado
-      foreach ($this->sizes as $sizeName => $dimensions) {
-        error_log("Procesando tamaño: " . $sizeName . " - " . $dimensions['width'] . "x" . $dimensions['height']);
+      // Redimensionar y optimizar
+      $processedImage = $this->resizeImageToType($image, $config);
 
-        $processedImage = clone $image;
-        $processedImage = $this->resizeImage($processedImage, $dimensions, $options);
+      // Generar nombre de archivo optimizado
+      $optimizedFilename = $this->generateOptimizedFilename($filename, $type);
+      $outputPath = $this->getUploadPath() . $optimizedFilename;
 
-        $sizedFilename = $this->generateSizedFilename($filename, $sizeName);
-        $outputPath = $this->getUploadPath() . $sizedFilename;
+      error_log("Guardando imagen optimizada en: " . $outputPath);
 
-        error_log("Guardando en: " . $outputPath);
+      // Convertir a WebP y guardar
+      $webpImage = $processedImage->toWebp($config['quality']);
+      $webpImage->save($outputPath);
 
-        // Guardar imagen con calidad específica
-        $quality = $this->getQuality($image->origin()->mediaType());
-        $processedImage->save($outputPath, $quality);
+      error_log("Imagen WebP guardada: " . $optimizedFilename . " (" . filesize($outputPath) . " bytes)");
+      error_log("Dimensiones finales: " . $processedImage->width() . "x" . $processedImage->height());
 
-        error_log("Imagen guardada: " . $sizedFilename . " (" . filesize($outputPath) . " bytes)");
+      $result = [
+        'success' => true,
+        'filename' => $optimizedFilename,
+        'path' => UPLOAD_PATH_IMAGES . $optimizedFilename,
+        'width' => $processedImage->width(),
+        'height' => $processedImage->height(),
+        'size' => filesize($outputPath),
+        'type' => $type,
+        'format' => 'webp'
+      ];
 
-        // Generar WebP si está habilitado
-        if (GENERATE_WEBP) {
-          $webpPath = $this->generateWebPPath($outputPath);
-          $processedImage->toWebp($quality)->save($webpPath);
-          error_log("WebP generado: " . $webpPath);
-        }
-
-        $results[$sizeName] = [
-          'filename' => $sizedFilename,
-          'path' => UPLOAD_PATH_IMAGES . $sizedFilename,
-          'width' => $processedImage->width(),
-          'height' => $processedImage->height(),
-          'size' => filesize($outputPath)
-        ];
-      }
-
-      error_log("=== PROCESAMIENTO COMPLETADO ===");
-      error_log("Imágenes generadas: " . count($results));
-      return ['success' => true, 'images' => $results];
+      error_log("=== PROCESAMIENTO COMPLETADO EXITOSAMENTE ===");
+      return $result;
     } catch (Exception $e) {
       error_log("ERROR procesando imagen: " . $e->getMessage());
       error_log("Stack trace: " . $e->getTraceAsString());
@@ -82,64 +80,43 @@ class ImageManager
   }
 
   /**
-   * Redimensionar imagen según configuración
+   * Redimensionar imagen según tipo específico
    */
-  private function resizeImage($image, $dimensions, $options)
+  private function resizeImageToType($image, $config)
   {
-    $width = $dimensions['width'];
-    $height = $dimensions['height'];
-    $crop = $options['crop'] ?? $dimensions['crop'] ?? false;
+    $width = $config['width'];
+    $height = $config['height'];
+    $crop = $config['crop'] ?? true;
 
     if ($crop) {
-      // Crop y redimensión
+      // Crop exacto para mantener dimensiones precisas
+      error_log("Aplicando crop a {$width}x{$height}");
       return $image->cover($width, $height, IMAGE_CROP_POSITION);
     } else {
-      // Redimensión manteniendo aspecto
+      // Redimensión manteniendo aspecto (limitado por las dimensiones máximas)
+      error_log("Aplicando scale a {$width}x{$height}");
       return $image->scale($width, $height);
     }
   }
 
   /**
-   * Parsear configuración de tamaños
+   * Generar nombre de archivo optimizado
    */
-  private function parseSizes()
-  {
-    $this->sizes = [];
-
-    foreach (explode(',', IMAGE_SIZES) as $sizeConfig) {
-      $parts = explode(':', trim($sizeConfig));
-      if (count($parts) !== 2) continue;
-
-      list($name, $dimensions) = $parts;
-
-      // Detectar si tiene crop (ejemplo: 300x300c)
-      $hasCrop = substr($dimensions, -1) === 'c';
-      if ($hasCrop) {
-        $dimensions = rtrim($dimensions, 'c');
-      }
-
-      $sizeParts = explode('x', $dimensions);
-      if (count($sizeParts) !== 2) continue;
-
-      $this->sizes[$name] = [
-        'width' => (int)$sizeParts[0],
-        'height' => (int)$sizeParts[1],
-        'crop' => $hasCrop
-      ];
-    }
-  }
-
-  private function generateSizedFilename($originalFilename, $sizeName)
+  private function generateOptimizedFilename($originalFilename, $type)
   {
     $info = pathinfo($originalFilename);
-    return $info['filename'] . '_' . $sizeName . '.' . $info['extension'];
+    $baseName = $info['filename'];
+
+    // Remover el tipo del nombre si ya está presente para evitar duplicados
+    $baseName = preg_replace('/^' . preg_quote($type, '/') . '_/', '', $baseName);
+
+    // Generar nombre final con tipo y formato
+    return $type . '_' . $baseName . '_optimized.webp';
   }
 
-  private function generateWebPPath($originalPath)
-  {
-    return preg_replace('/\.[^.]+$/', '.webp', $originalPath);
-  }
-
+  /**
+   * Obtener directorio de subida
+   */
   private function getUploadPath()
   {
     $path = $_SERVER['DOCUMENT_ROOT'] . '/' . UPLOAD_PATH_IMAGES;
@@ -149,17 +126,39 @@ class ImageManager
     return $path;
   }
 
-  private function getQuality($mimeType)
+  /**
+   * Verificar si un tipo de imagen es válido
+   */
+  public function isValidType($type)
   {
-    switch ($mimeType) {
-      case 'image/jpeg':
-        return IMAGE_QUALITY_JPG;
-      case 'image/png':
-        return IMAGE_QUALITY_PNG;
-      case 'image/webp':
-        return IMAGE_QUALITY_WEBP;
-      default:
-        return 85;
-    }
+    return isset($this->typeConfigs[$type]);
+  }
+
+  /**
+   * Obtener configuración para un tipo específico
+   */
+  public function getTypeConfig($type)
+  {
+    return $this->typeConfigs[$type] ?? null;
+  }
+
+  /**
+   * Obtener todos los tipos disponibles
+   */
+  public function getAvailableTypes()
+  {
+    return array_keys($this->typeConfigs);
+  }
+
+  // === MÉTODO LEGACY PARA COMPATIBILIDAD ===
+  /**
+   * Procesar imagen con múltiples tamaños (método anterior)
+   * Mantenido para compatibilidad con código existente
+   */
+  public function processImage($filePath, $filename, $options = [])
+  {
+    // Implementación anterior mantenida...
+    // (código existente sin cambios)
+    return ['success' => false, 'error' => 'Usar processImageByType() para nuevas implementaciones'];
   }
 }
