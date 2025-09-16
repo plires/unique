@@ -1,5 +1,10 @@
 <?php
 
+// Cargar autoload de Composer una sola vez
+if (!class_exists('Intervention\Image\ImageManager')) {
+  require_once __DIR__ . '/../vendor/autoload.php';
+}
+
 /**
  * Archivo de configuración principal
  * Lee variables del archivo .env y define constantes globales

@@ -5,25 +5,9 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
-// Detectar la ruta correcta del autoloader automáticamente
-$autoloadPaths = [
-  __DIR__ . '/../vendor/autoload.php',  // Desde clases/ hacia raíz
-  __DIR__ . '/../../vendor/autoload.php', // Si estamos más profundo
-  'vendor/autoload.php' // Ruta relativa como fallback
-];
-
-$autoloadLoaded = false;
-foreach ($autoloadPaths as $path) {
-  if (file_exists($path)) {
-    require $path;
-    $autoloadLoaded = true;
-    break;
-  }
-}
-
-if (!$autoloadLoaded) {
-  die('Error: No se pudo encontrar vendor/autoload.php');
-}
+// NOTA: El autoloader ya se carga desde config.inc.php
+// No es necesario cargarlo aquí porque todos los archivos que usan esta clase
+// cargan primero config.inc.php
 
 class App
 {
