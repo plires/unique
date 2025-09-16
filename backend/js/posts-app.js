@@ -306,56 +306,36 @@ let postsApp = new Vue({
 
     // === GESTIÓN DE MEDIOS ===
     async manageMedia(postId) {
-      console.log("=== INICIO manageMedia ===");
-      console.log("Post ID recibido:", postId);
-
-      // Validar que el ID sea válido
-      if (!postId || postId === null || postId === undefined) {
-        console.error("ID de post inválido:", postId);
-        this.showError("Error: ID de post inválido");
-        return;
-      }
-
       const postData = await this.loadPostComplete(postId);
-      console.log("Post data cargado:", postData);
-
       if (!postData) {
-        console.error("No se pudo cargar el post con ID:", postId);
+        console.error("No se pudo cargar post data");
         return;
       }
 
-      // Asegurar estructura correcta de imágenes
-      const images = postData.images || {
-        listing: [],
-        header: [],
-        content: [],
-      };
-      console.log("Imágenes estructuradas:", images);
-
-      this.currentMediaPost = {
-        id: postData.id,
-        title: postData.title,
-        images: images,
+      // Método alternativo: crear objeto completamente nuevo
+      const newCurrentMediaPost = {
+        id: parseInt(postData.id), // Forzar conversión a entero
+        title: String(postData.title || ""),
+        images: postData.images || {
+          listing: [],
+          header: [],
+          content: [],
+        },
       };
 
-      console.log("currentMediaPost configurado:", this.currentMediaPost);
+      // Asignar el objeto completo
+      this.currentMediaPost = newCurrentMediaPost;
 
-      // Resetear formulario de nueva imagen
       this.newImage = {
         type: "content",
         alt_text: "",
       };
 
-      console.log("=== manageMedia completado ===");
       $("#mediaModal").modal("show");
     },
 
     async uploadImage(e) {
       e.preventDefault();
-
-      console.log("=== INICIO uploadImage ===");
-      console.log("currentMediaPost:", this.currentMediaPost);
-      console.log("newImage:", this.newImage);
 
       const fileInput = this.$refs.imageFile;
       if (!fileInput.files.length) {
@@ -373,8 +353,6 @@ let postsApp = new Vue({
         return;
       }
 
-      console.log("ID del post validado:", this.currentMediaPost.id);
-
       // Validar que las imágenes tengan la estructura correcta
       if (
         !this.currentMediaPost.images ||
@@ -387,11 +365,6 @@ let postsApp = new Vue({
       // Validar límites por tipo
       const type = this.newImage.type;
       const currentImages = this.currentMediaPost.images[type] || [];
-
-      console.log(
-        `Validando tipo ${type}, imágenes actuales:`,
-        currentImages.length
-      );
 
       if (
         (type === "listing" || type === "header") &&
@@ -413,8 +386,6 @@ let postsApp = new Vue({
         formData.append("alt_text", this.newImage.alt_text);
       }
 
-      console.log("FormData preparado para post_id:", this.currentMediaPost.id);
-
       try {
         this.showLoader();
 
@@ -428,13 +399,10 @@ let postsApp = new Vue({
           }
         );
 
-        console.log("Upload response:", uploadResponse.data);
-
         this.showSuccess("Imagen subida exitosamente");
 
         // VALIDACIÓN CRÍTICA: Asegurar que el ID sigue siendo válido antes de recargar
         const postIdToReload = this.currentMediaPost.id;
-        console.log("Recargando post con ID:", postIdToReload);
 
         if (!postIdToReload) {
           console.error("ERROR: ID de post perdido durante el upload");
@@ -447,15 +415,11 @@ let postsApp = new Vue({
         // Recargar datos del post
         const updatedPost = await this.loadPostComplete(postIdToReload);
         if (updatedPost) {
-          console.log("Post actualizado recibido:", updatedPost);
-
           this.currentMediaPost.images = updatedPost.images || {
             listing: [],
             header: [],
             content: [],
           };
-
-          console.log("Imágenes actualizadas:", this.currentMediaPost.images);
         } else {
           console.error("No se pudo recargar el post actualizado");
           // No mostrar error al usuario, ya que la imagen se subió correctamente
@@ -464,8 +428,6 @@ let postsApp = new Vue({
         // Limpiar formulario
         fileInput.value = "";
         this.newImage = { type: "content", alt_text: "" };
-
-        console.log("=== uploadImage completado ===");
       } catch (error) {
         console.error("Error en upload:", error);
         this.showError(
