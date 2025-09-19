@@ -24,31 +24,36 @@ class Posts extends BaseCRUD
   }
 
   /**
-   * Obtener posts con información de medios asociados
+   * Obtener posts con información de medios asociados (MODIFICADO para incluir videos)
    */
   public function getPostsWithMedia($includeInactive = false)
   {
     $statusCondition = $includeInactive ? '' : 'WHERE p.status = 1';
 
     $sql = "
-          SELECT 
-              p.id,
-              p.title,
-              p.content,
-              p.youtube_url,
-              p.status,
-              p.created_at,
-              p.updated_at,
-              COUNT(DISTINCT i.id) as total_images,
-              GROUP_CONCAT(DISTINCT CASE WHEN i.type = 'listing' THEN i.filename END) as listing_image,
-              GROUP_CONCAT(DISTINCT CASE WHEN i.type = 'header' THEN i.filename END) as header_image,
-              COUNT(CASE WHEN i.type = 'content' THEN 1 END) as content_images_count
-          FROM posts p
-          LEFT JOIN post_images i ON p.id = i.post_id AND i.status = 1
-          {$statusCondition}
-          GROUP BY p.id
-          ORDER BY p.created_at DESC
-      ";
+        SELECT 
+            p.id,
+            p.title,
+            p.content,
+            p.youtube_url,
+            p.status,
+            p.created_at,
+            p.updated_at,
+            COUNT(DISTINCT i.id) as total_images,
+            -- NUEVO: Contar videos basado en URL de YouTube
+            CASE 
+                WHEN p.youtube_url IS NOT NULL AND p.youtube_url != '' THEN 1 
+                ELSE 0 
+            END as total_videos,
+            GROUP_CONCAT(DISTINCT CASE WHEN i.type = 'listing' THEN i.filename END) as listing_image,
+            GROUP_CONCAT(DISTINCT CASE WHEN i.type = 'header' THEN i.filename END) as header_image,
+            COUNT(CASE WHEN i.type = 'content' THEN 1 END) as content_images_count
+        FROM posts p
+        LEFT JOIN post_images i ON p.id = i.post_id AND i.status = 1
+        {$statusCondition}
+        GROUP BY p.id, p.youtube_url  -- NUEVO: Agregar youtube_url al GROUP BY
+        ORDER BY p.created_at DESC
+    ";
 
     return $this->query($sql);
   }
