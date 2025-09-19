@@ -9,6 +9,6 @@ define('URI', $_SERVER['REQUEST_URI']);
 ////////////////////////
 ///BASE DE DATOS REMOTO
 ////////////////////////
-define('DSN', 'mysql:host=localhost;dbname=lc_unique;charset=utf8;port:3306');
+define('DSN', 'mysql:host=localhost;dbname=lc_unique;charset=utf8mb4;port:3306');
 define('DB_USER', 'homestead');
 define('DB_PASS', 'secret');

@@ -60,7 +60,7 @@ define('DB_HOST', env('DB_HOST', 'localhost'));
 define('DB_NAME', env('DB_NAME', 'lc_unique'));
 define('DB_USER', env('DB_USER', 'homestead'));
 define('DB_PASS', env('DB_PASS', 'secret'));
-define('DB_CHARSET', env('DB_CHARSET', 'utf8'));
+define('DB_CHARSET', env('DB_CHARSET', 'utf8mb4'));
 
 // DSN para PDO
 define('DSN', 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET);

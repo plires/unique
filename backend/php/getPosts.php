@@ -2,6 +2,7 @@
 
 /**
  * API para obtener todos los posts para el backend administrativo
+ * VERIFICAR que esté llamando a getPostsWithMedia()
  */
 
 require_once('../../includes/config.inc.php');
@@ -14,7 +15,7 @@ try {
   // Parámetro opcional para incluir inactivos (por defecto: incluir todos)
   $includeInactive = isset($_GET['include_inactive']) ? (bool)$_GET['include_inactive'] : true;
 
-  // Obtener todos los posts
+  // IMPORTANTE: Usar getPostsWithMedia() para obtener contadores
   $posts = $postsModel->getPostsWithMedia($includeInactive);
 
   ResponseHelper::json($posts);
