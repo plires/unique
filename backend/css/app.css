@@ -9,11 +9,13 @@ td { vertical-align: middle; }
 }
 #app #loader { 
   position: absolute;
+  background: rgb(0, 0, 0, 0.6);
   left: 0;
   top: 0;
   width: 100%;
   height: 100vh;
   z-index: 10000;
+  display: flex;
   justify-content: center;
   align-items: center;
 }
