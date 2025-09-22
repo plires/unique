@@ -10,6 +10,9 @@ include_once('../includes/funciones_validar.php');
 require_once("../clases/app.php");
 require_once("../clases/repositorioSQL.php");
 
+// Obtener datos de posts para la sección de noticias
+include_once('../includes/latest-news-data.php');
+
 ?>
 
 <!DOCTYPE html>
@@ -29,6 +32,7 @@ require_once("../clases/repositorioSQL.php");
 	<link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
 	<link rel="stylesheet" href="../node_modules/wowjs/css/libs/animate.css">
 	<link rel="stylesheet" href="../css/app.css">
+	<link rel="stylesheet" href="../css/latest-news.css">
 	<?php include('../includes/tag_manager_head.php'); ?>
 </head>
 
@@ -232,6 +236,9 @@ require_once("../clases/repositorioSQL.php");
 		</div>
 	</section>
 	<!-- Servicios end -->
+
+	<!-- Sección de Últimas Novedades -->
+	<?php include('../includes/latest-news-section.php'); ?>
 
 	<!-- Feed Instagram -->
 	<section id="instagram" class="instagram container wow fadeInUp">
