@@ -5,6 +5,7 @@ let postsApp = new Vue({
   data: {
     posts: [],
     searchQuery: "",
+    languageFilter: "all", // Filtro de idioma por defecto
     messages: [],
 
     // Agregar propiedades para compatibilidad con modalUser
@@ -50,17 +51,29 @@ let postsApp = new Vue({
 
   computed: {
     filteredPosts() {
-      if (!this.searchQuery.trim()) {
-        return this.posts;
+      let filtered = this.posts;
+
+      // Filtrar por idioma si no es "all"
+      if (this.languageFilter !== "all") {
+        filtered = filtered.filter((post) => {
+          // Manejar posts sin idioma definido
+          const postLanguage = post.language || "undefined";
+          return postLanguage === this.languageFilter;
+        });
       }
 
-      const query = this.searchQuery.toLowerCase();
-      return this.posts.filter(
-        (post) =>
-          post.title.toLowerCase().includes(query) ||
-          post.content.toLowerCase().includes(query) ||
-          (post.language && post.language.toLowerCase().includes(query))
-      );
+      // Filtrar por búsqueda de texto
+      if (this.searchQuery.trim()) {
+        const query = this.searchQuery.toLowerCase();
+        filtered = filtered.filter(
+          (post) =>
+            post.title.toLowerCase().includes(query) ||
+            post.content.toLowerCase().includes(query) ||
+            (post.language && post.language.toLowerCase().includes(query))
+        );
+      }
+
+      return filtered;
     },
   },
 
@@ -71,6 +84,48 @@ let postsApp = new Vue({
   },
 
   methods: {
+    // === FILTROS DE IDIOMA ===
+    setLanguageFilter(language) {
+      this.languageFilter = language;
+
+      // Opcional: Scroll suave al top de la tabla
+      this.$nextTick(() => {
+        const table = document.querySelector(".table-responsive");
+        if (table) {
+          table.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+    },
+
+    getLanguageName(langCode) {
+      const languages = {
+        es: "Español",
+        en: "English",
+        all: "Todos",
+      };
+      return languages[langCode] || langCode;
+    },
+
+    clearFilters() {
+      this.searchQuery = "";
+      this.languageFilter = "all";
+
+      // Mostrar mensaje de filtros limpiados
+      this.showSuccess("Filtros limpiados - Mostrando todos los posts");
+    },
+
+    // Método auxiliar para obtener estadísticas de idiomas
+    getLanguageStats() {
+      const stats = {
+        total: this.posts.length,
+        es: this.posts.filter((p) => p.language === "es").length,
+        en: this.posts.filter((p) => p.language === "en").length,
+        undefined: this.posts.filter((p) => !p.language).length,
+      };
+
+      return stats;
+    },
+
     // === UTILIDADES ===
     stripHtml(html) {
       const tmp = document.createElement("div");

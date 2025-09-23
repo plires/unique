@@ -66,6 +66,52 @@ include_once('../includes/config.inc.php');
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
+    .language-filter .btn-group {
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      border-radius: 6px;
+    }
+
+    .language-filter .btn {
+      border-radius: 0;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .language-filter .btn:first-child {
+      border-top-left-radius: 6px;
+      border-bottom-left-radius: 6px;
+    }
+
+    .language-filter .btn:last-child {
+      border-top-right-radius: 6px;
+      border-bottom-right-radius: 6px;
+    }
+
+    .language-filter .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .alert-sm {
+      font-size: 0.875rem;
+    }
+
+    .post-title {
+      font-weight: 500;
+      color: #333;
+    }
+
+    .post-content {
+      color: #666;
+      font-size: 0.85rem;
+    }
+
+    /* Mejorar apariencia de las banderas de idioma en la tabla */
+    .table td .badge {
+      font-size: 0.8rem;
+      padding: 0.4rem 0.6rem;
+    }
   </style>
 </head>
 
@@ -119,13 +165,60 @@ include_once('../includes/config.inc.php');
       </div>
 
       <div class="row mb-3">
-        <div class="col-md-8">
+        <div class="col-md-6">
+          <small class="text-muted d-block mb-1">Buscar Posts:</small>
           <input v-model="searchQuery" class="form-control" type="search" placeholder="Buscar posts..." aria-label="Search">
         </div>
-        <div class="col-md-4 text-right">
+
+        <!-- NUEVO: Filtro de idiomas -->
+        <div class="col-md-3">
+          <div class="language-filter">
+            <small class="text-muted d-block mb-1">Filtrar por idioma:</small>
+            <div class="btn-group btn-group-sm w-100" role="group" aria-label="Filtros de idioma">
+              <button
+                type="button"
+                @click="setLanguageFilter('all')"
+                :class="['btn', languageFilter === 'all' ? 'btn-dark' : 'btn-outline-dark']"
+                title="Mostrar todos los idiomas">
+                <i class="fas fa-globe"></i> Todos
+              </button>
+              <button
+                type="button"
+                @click="setLanguageFilter('es')"
+                :class="['btn', languageFilter === 'es' ? 'btn-primary' : 'btn-outline-primary']"
+                title="Solo posts en español">
+                🇪🇸 ES
+              </button>
+              <button
+                type="button"
+                @click="setLanguageFilter('en')"
+                :class="['btn', languageFilter === 'en' ? 'btn-success' : 'btn-outline-success']"
+                title="Solo posts en inglés">
+                🇺🇸 EN
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3 text-right">
           <button @click="openCreateModal" class="btn btn-primary">
             <i class="fas fa-plus"></i> Crear Post
           </button>
+        </div>
+      </div>
+
+      <!-- NUEVO: Mostrar contador de resultados filtrados -->
+      <div class="row mb-2" v-if="languageFilter !== 'all' || searchQuery.trim()">
+        <div class="col-md-12">
+          <div class="alert alert-info alert-sm py-2">
+            <i class="fas fa-filter"></i>
+            Mostrando {{ filteredPosts.length }} de {{ posts.length }} posts
+            <span v-if="languageFilter !== 'all'"> - Idioma: <strong>{{ getLanguageName(languageFilter) }}</strong></span>
+            <span v-if="searchQuery.trim()"> - Búsqueda: "<strong>{{ searchQuery }}</strong>"</span>
+            <button @click="clearFilters" class="btn btn-sm btn-outline-secondary ml-2" v-if="languageFilter !== 'all' || searchQuery.trim()">
+              <i class="fas fa-times"></i> Limpiar filtros
+            </button>
+          </div>
         </div>
       </div>
 
