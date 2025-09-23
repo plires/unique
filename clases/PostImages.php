@@ -78,7 +78,8 @@ class PostImages extends BaseCRUD
       $processingResult = $this->imageManager->processImageByType(
         $tempFilepath,
         $file['name'],
-        $type
+        $type,
+        $postId
       );
 
       // Eliminar archivo temporal

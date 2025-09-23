@@ -22,12 +22,13 @@ class ImageManager
   /**
    * Procesar imagen por tipo específico (listing, header, content)
    */
-  public function processImageByType($filePath, $filename, $type = 'content')
+  public function processImageByType($filePath, $filename, $type = 'content', $postId = null)
   {
     error_log("=== INICIO PROCESAMIENTO IMAGEN POR TIPO ===");
     error_log("Archivo: " . $filePath);
     error_log("Filename: " . $filename);
     error_log("Tipo: " . $type);
+    error_log("Post ID: " . ($postId ?? 'no especificado'));
 
     if (!isset($this->typeConfigs[$type])) {
       error_log("ERROR: Tipo de imagen desconocido: " . $type);
@@ -44,8 +45,8 @@ class ImageManager
       // Redimensionar y optimizar
       $processedImage = $this->resizeImageToType($image, $config);
 
-      // Generar nombre de archivo optimizado
-      $optimizedFilename = $this->generateOptimizedFilename($filename, $type);
+      // Generar nombre de archivo optimizado CON postId para unicidad
+      $optimizedFilename = $this->generateOptimizedFilename($filename, $type, $postId);
       $outputPath = $this->getUploadPath() . $optimizedFilename;
 
       error_log("Guardando imagen optimizada en: " . $outputPath);
@@ -98,18 +99,34 @@ class ImageManager
   }
 
   /**
-   * Generar nombre de archivo optimizado
+   * Generar nombre de archivo optimizado con ID único
    */
-  private function generateOptimizedFilename($originalFilename, $type)
+  private function generateOptimizedFilename($originalFilename, $type, $postId = null)
   {
     $info = pathinfo($originalFilename);
     $baseName = $info['filename'];
 
+    // Limpiar nombre base de caracteres especiales
+    $baseName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $baseName);
+    $baseName = preg_replace('/_+/', '_', $baseName); // Múltiples _ por uno solo
+    $baseName = trim($baseName, '_'); // Remover _ al inicio y final
+
+    // Si queda vacío, usar nombre genérico
+    if (empty($baseName)) {
+      $baseName = 'image';
+    }
+
     // Remover el tipo del nombre si ya está presente para evitar duplicados
     $baseName = preg_replace('/^' . preg_quote($type, '/') . '_/', '', $baseName);
 
-    // Generar nombre final con tipo y formato
-    return $type . '_' . $baseName . '_optimized.webp';
+    // Generar ID único basado en timestamp y random
+    $uniqueId = time() . '_' . uniqid() . '_' . mt_rand(1000, 9999);
+
+    // Opcional: agregar post_id para mayor identificación
+    $postPrefix = $postId ? "post{$postId}_" : '';
+
+    // Generar nombre final con identificadores únicos
+    return $postPrefix . $type . '_' . $baseName . '_' . $uniqueId . '.webp';
   }
 
   /**
