@@ -515,9 +515,12 @@ let postsApp = new Vue({
       try {
         this.showLoader();
 
+        const formData = new FormData();
+        formData.append("id", imageId);
+
         await axios.post(
           window.APP_CONFIG.API_BASE_URL + "php/deleteImage.php",
-          { id: imageId }
+          formData
         );
 
         this.showSuccess("Imagen eliminada exitosamente");
