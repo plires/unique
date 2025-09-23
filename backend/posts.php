@@ -112,6 +112,52 @@ include_once('../includes/config.inc.php');
       font-size: 0.8rem;
       padding: 0.4rem 0.6rem;
     }
+
+    /* Paginacion */
+    .pagination-info {
+      padding: 8px 0;
+    }
+
+    .per-page-selector select {
+      width: auto;
+      display: inline-block;
+    }
+
+    .pagination-sm .page-link {
+      padding: 0.375rem 0.75rem;
+    }
+
+    .pagination .page-item.disabled .page-link {
+      cursor: not-allowed;
+    }
+
+    .spinner-border {
+      width: 2rem;
+      height: 2rem;
+    }
+
+    /* Estilo para mensaje de no hay posts */
+    .text-muted .fa-inbox {
+      color: #dee2e6;
+    }
+
+    /* Hacer la tabla responsive para paginación */
+    @media (max-width: 768px) {
+      .pagination {
+        flex-wrap: wrap;
+        justify-content: center !important;
+      }
+
+      .pagination-info {
+        text-align: center;
+        margin-bottom: 1rem;
+      }
+
+      .per-page-selector {
+        text-align: center;
+        margin-bottom: 1rem;
+      }
+    }
   </style>
 </head>
 
@@ -170,7 +216,7 @@ include_once('../includes/config.inc.php');
           <input v-model="searchQuery" class="form-control" type="search" placeholder="Buscar posts..." aria-label="Search">
         </div>
 
-        <!-- NUEVO: Filtro de idiomas -->
+        <!-- Filtro de idiomas -->
         <div class="col-md-3">
           <div class="language-filter">
             <small class="text-muted d-block mb-1">Filtrar por idioma:</small>
@@ -207,12 +253,17 @@ include_once('../includes/config.inc.php');
         </div>
       </div>
 
-      <!-- NUEVO: Mostrar contador de resultados filtrados -->
-      <div class="row mb-2" v-if="languageFilter !== 'all' || searchQuery.trim()">
+      <!-- Información de paginación -->
+      <div class="row mb-2" v-if="pagination.total > 0">
         <div class="col-md-12">
           <div class="alert alert-info alert-sm py-2">
-            <i class="fas fa-filter"></i>
-            Mostrando {{ filteredPosts.length }} de {{ posts.length }} posts
+            <i class="fas fa-info-circle"></i>
+            <span v-if="pagination.total > pagination.per_page">
+              Mostrando {{ pagination.showing_from }} a {{ pagination.showing_to }} de {{ pagination.total }} posts
+            </span>
+            <span v-else>
+              {{ pagination.total }} post{{ pagination.total !== 1 ? 's' : '' }} en total
+            </span>
             <span v-if="languageFilter !== 'all'"> - Idioma: <strong>{{ getLanguageName(languageFilter) }}</strong></span>
             <span v-if="searchQuery.trim()"> - Búsqueda: "<strong>{{ searchQuery }}</strong>"</span>
             <button @click="clearFilters" class="btn btn-sm btn-outline-secondary ml-2" v-if="languageFilter !== 'all' || searchQuery.trim()">
@@ -241,7 +292,7 @@ include_once('../includes/config.inc.php');
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="post in filteredPosts" :key="post.id">
+                <tr v-for="post in posts" :key="post.id">
                   <td>{{ post.id }}</td>
                   <td>
                     <div class="post-title" :title="post.title">
@@ -300,17 +351,147 @@ include_once('../includes/config.inc.php');
                   </td>
                 </tr>
 
-                <tr v-if="posts.length === 0">
-                  <td colspan="8" class="text-center">
-                    <em>No hay posts disponibles</em>
+                <!-- Mensaje cuando no hay posts -->
+                <tr v-if="!isLoading && posts.length === 0">
+                  <td colspan="8" class="text-center py-4">
+                    <div class="text-muted">
+                      <i class="fas fa-inbox fa-2x mb-2"></i>
+                      <div v-if="languageFilter !== 'all' || searchQuery.trim()">
+                        No se encontraron posts con los filtros aplicados
+                      </div>
+                      <div v-else>
+                        No hay posts disponibles
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Loading spinner cuando está cargando -->
+                <tr v-if="isLoading">
+                  <td colspan="8" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="sr-only">Cargando posts...</span>
+                    </div>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-
         </div>
       </div>
+
+      <!-- Componente de paginación completo -->
+      <div class="row mt-3" v-if="!isLoading && pagination.total > 0">
+        <!-- Información de resultados -->
+        <div class="col-md-6">
+          <div class="pagination-info">
+            <small class="text-muted">
+              <span v-if="pagination.total > 0">
+                Mostrando {{ pagination.showing_from }} a {{ pagination.showing_to }} de {{ pagination.total }} posts
+                <span v-if="languageFilter !== 'all' || searchQuery.trim()">filtrados</span>
+              </span>
+            </small>
+          </div>
+        </div>
+
+        <!-- Selector de elementos por página -->
+        <div class="col-md-3">
+          <div class="per-page-selector" v-if="pagination.total > 10">
+            <small class="text-muted d-block">Posts por página:</small>
+            <select
+              @change="changePerPage($event.target.value)"
+              :value="pagination.per_page"
+              class="form-control form-control-sm">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Controles de paginación -->
+        <div class="col-md-3">
+          <nav v-if="pagination.total_pages > 1" aria-label="Paginación de posts">
+            <ul class="pagination pagination-sm justify-content-end mb-0">
+              <!-- Botón Anterior -->
+              <li class="page-item" :class="{ disabled: !pagination.has_prev }">
+                <button
+                  @click="changePage(pagination.current_page - 1)"
+                  :disabled="!pagination.has_prev"
+                  class="page-link"
+                  aria-label="Página anterior">
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+              </li>
+
+              <!-- Páginas -->
+              <template v-if="pagination.total_pages <= 7">
+                <!-- Mostrar todas las páginas si son pocas -->
+                <li
+                  v-for="page in pagination.total_pages"
+                  :key="page"
+                  class="page-item"
+                  :class="{ active: page === pagination.current_page }">
+                  <button
+                    @click="changePage(page)"
+                    class="page-link">
+                    {{ page }}
+                  </button>
+                </li>
+              </template>
+
+              <template v-else>
+                <!-- Paginación inteligente para muchas páginas -->
+                <!-- Primera página -->
+                <li class="page-item" :class="{ active: pagination.current_page === 1 }">
+                  <button @click="changePage(1)" class="page-link">1</button>
+                </li>
+
+                <!-- Puntos suspensivos iniciales -->
+                <li v-if="pagination.current_page > 3" class="page-item disabled">
+                  <span class="page-link">...</span>
+                </li>
+
+                <!-- Páginas alrededor de la actual -->
+                <li
+                  v-for="page in getPaginationRange()"
+                  :key="page"
+                  class="page-item"
+                  :class="{ active: page === pagination.current_page }">
+                  <button @click="changePage(page)" class="page-link">{{ page }}</button>
+                </li>
+
+                <!-- Puntos suspensivos finales -->
+                <li v-if="pagination.current_page < pagination.total_pages - 2" class="page-item disabled">
+                  <span class="page-link">...</span>
+                </li>
+
+                <!-- Última página -->
+                <li
+                  v-if="pagination.total_pages > 1"
+                  class="page-item"
+                  :class="{ active: pagination.current_page === pagination.total_pages }">
+                  <button @click="changePage(pagination.total_pages)" class="page-link">
+                    {{ pagination.total_pages }}
+                  </button>
+                </li>
+              </template>
+
+              <!-- Botón Siguiente -->
+              <li class="page-item" :class="{ disabled: !pagination.has_next }">
+                <button
+                  @click="changePage(pagination.current_page + 1)"
+                  :disabled="!pagination.has_next"
+                  class="page-link"
+                  aria-label="Página siguiente">
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+
     </div>
 
     <!-- Modal Crear/Editar Post -->
@@ -324,6 +505,7 @@ include_once('../includes/config.inc.php');
 
     <!-- Incluir modales de usuario existentes -->
     <?php include_once('includes/modalUser.inc.php') ?>
+
   </div>
 
   <!-- JavaScript -->

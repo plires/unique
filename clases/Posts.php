@@ -26,6 +26,89 @@ class Posts extends BaseCRUD
   }
 
   /**
+   * Obtener posts con paginación y filtros para el backend
+   */
+  public function getPostsWithMediaPaginated($page = 1, $perPage = 10, $includeInactive = false, $languageFilter = null, $searchQuery = null)
+  {
+    $conditions = [];
+    $params = [];
+
+    // Filtro de estado
+    if (!$includeInactive) {
+      $conditions[] = 'p.status = 1';
+    }
+
+    // Filtro de idioma
+    if ($languageFilter && $languageFilter !== 'all') {
+      $conditions[] = 'p.language = :language';
+      $params['language'] = $languageFilter;
+    }
+
+    // Filtro de búsqueda
+    if ($searchQuery && trim($searchQuery)) {
+      $conditions[] = '(p.title LIKE :search OR p.content LIKE :search)';
+      $params['search'] = '%' . trim($searchQuery) . '%';
+    }
+
+    $whereClause = empty($conditions) ? '1=1' : implode(' AND ', $conditions);
+
+    // Consulta principal con paginación
+    $offset = ($page - 1) * $perPage;
+
+    $sql = "
+    SELECT 
+      p.id,
+      p.title,
+      p.content,
+      p.youtube_url,
+      p.language,
+      p.status,
+      p.created_at,
+      p.updated_at,
+      COUNT(DISTINCT i.id) as total_images,
+      CASE 
+        WHEN p.youtube_url IS NOT NULL AND p.youtube_url != '' THEN 1 
+        ELSE 0 
+      END as total_videos,
+      GROUP_CONCAT(DISTINCT CASE WHEN i.type = 'listing' THEN i.filename END) as listing_image,
+      GROUP_CONCAT(DISTINCT CASE WHEN i.type = 'header' THEN i.filename END) as header_image,
+      COUNT(CASE WHEN i.type = 'content' THEN 1 END) as content_images_count
+    FROM posts p
+    LEFT JOIN post_images i ON p.id = i.post_id AND i.status = 1
+    WHERE {$whereClause}
+    GROUP BY p.id, p.youtube_url, p.language
+    ORDER BY p.created_at DESC
+    LIMIT {$perPage} OFFSET {$offset}
+  ";
+
+    $posts = $this->query($sql, $params);
+
+    // Contar total de registros
+    $countSql = "
+    SELECT COUNT(DISTINCT p.id) as total
+    FROM posts p
+    WHERE {$whereClause}
+  ";
+
+    $totalResult = $this->queryOne($countSql, $params);
+    $total = $totalResult['total'];
+
+    return [
+      'data' => $posts,
+      'pagination' => [
+        'current_page' => $page,
+        'per_page' => $perPage,
+        'total' => $total,
+        'total_pages' => ceil($total / $perPage),
+        'has_prev' => $page > 1,
+        'has_next' => $page < ceil($total / $perPage),
+        'showing_from' => $offset + 1,
+        'showing_to' => min($offset + $perPage, $total)
+      ]
+    ];
+  }
+
+  /**
    * Obtener posts con información de medios asociados (ACTUALIZADO para incluir language)
    */
   public function getPostsWithMedia($includeInactive = false)

@@ -8,6 +8,19 @@ let postsApp = new Vue({
     languageFilter: "all", // Filtro de idioma por defecto
     messages: [],
 
+    // NUEVAS PROPIEDADES PARA PAGINACIÓN
+    pagination: {
+      current_page: 1,
+      per_page: 10,
+      total: 0,
+      total_pages: 0,
+      has_prev: false,
+      has_next: false,
+      showing_from: 0,
+      showing_to: 0,
+    },
+    isLoading: false,
+
     // Agregar propiedades para compatibilidad con modalUser
     user: {},
     errorsUser: [],
@@ -49,52 +62,30 @@ let postsApp = new Vue({
     quillEditor: null,
   },
 
-  computed: {
-    filteredPosts() {
-      let filtered = this.posts;
-
-      // Filtrar por idioma si no es "all"
-      if (this.languageFilter !== "all") {
-        filtered = filtered.filter((post) => {
-          // Manejar posts sin idioma definido
-          const postLanguage = post.language || "undefined";
-          return postLanguage === this.languageFilter;
-        });
-      }
-
-      // Filtrar por búsqueda de texto
-      if (this.searchQuery.trim()) {
-        const query = this.searchQuery.toLowerCase();
-        filtered = filtered.filter(
-          (post) =>
-            post.title.toLowerCase().includes(query) ||
-            post.content.toLowerCase().includes(query) ||
-            (post.language && post.language.toLowerCase().includes(query))
-        );
-      }
-
-      return filtered;
-    },
-  },
-
   mounted() {
     this.loadPosts();
     this.getUser();
     this.initializeQuillEditor();
+    this.searchTimeout = null;
+  },
+
+  watch: {
+    searchQuery: "searchPosts",
   },
 
   methods: {
     // === FILTROS DE IDIOMA ===
     setLanguageFilter(language) {
       this.languageFilter = language;
+      this.loadPosts(1, true); // Cargar desde página 1 con nuevo filtro
+    },
 
-      // Opcional: Scroll suave al top de la tabla
-      this.$nextTick(() => {
-        const table = document.querySelector(".table-responsive");
-        if (table) {
-          table.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      });
+    // AGREGAR método para búsqueda con debounce
+    searchPosts() {
+      clearTimeout(this.searchTimeout);
+      this.searchTimeout = setTimeout(() => {
+        this.loadPosts(1, true);
+      }, 300);
     },
 
     getLanguageName(langCode) {
@@ -109,9 +100,8 @@ let postsApp = new Vue({
     clearFilters() {
       this.searchQuery = "";
       this.languageFilter = "all";
-
-      // Mostrar mensaje de filtros limpiados
-      this.showSuccess("Filtros limpiados - Mostrando todos los posts");
+      this.loadPosts(1, true);
+      this.showSuccess("Filtros reseteados - Mostrando todos los posts");
     },
 
     // Método auxiliar para obtener estadísticas de idiomas
@@ -232,21 +222,85 @@ let postsApp = new Vue({
     },
 
     // === GESTIÓN DE POSTS ===
-    async loadPosts() {
+    async loadPosts(page = 1, resetPage = false) {
+      this.isLoading = true;
+      this.showLoader();
+
+      if (resetPage) {
+        page = 1;
+        this.pagination.current_page = 1;
+      }
+
       try {
-        this.showLoader();
-        const response = await axios.get(
-          window.APP_CONFIG.API_BASE_URL + "php/getPosts.php"
-        );
-        this.posts = response.data;
+        const params = new URLSearchParams({
+          page: page,
+          per_page: this.pagination.per_page,
+          include_inactive: true,
+        });
+
+        // Agregar filtros si están activos
+        if (this.languageFilter !== "all") {
+          params.append("language", this.languageFilter);
+        }
+
+        if (this.searchQuery.trim()) {
+          params.append("search", this.searchQuery.trim());
+        }
+
+        const response = await fetch(`php/getPosts.php?${params}`);
+        const result = await response.json();
+
+        if (result) {
+          this.posts = result.data || [];
+          this.pagination = result.pagination || this.pagination;
+        }
       } catch (error) {
-        this.showError(
-          "Error al cargar posts: " +
-            (error.response?.data?.message || error.message)
-        );
+        console.error("Error al cargar posts:", error);
+        this.showError("Error al cargar los posts");
       } finally {
+        this.isLoading = false;
         this.hideLoader();
       }
+    },
+
+    // MÉTODO PARA CAMBIAR DE PÁGINA
+    changePage(page) {
+      if (page >= 1 && page <= this.pagination.total_pages) {
+        this.loadPosts(page);
+      }
+    },
+
+    // MÉTODO PARA CAMBIAR NÚMERO DE ELEMENTOS POR PÁGINA
+    changePerPage(perPage) {
+      this.pagination.per_page = perPage;
+      this.loadPosts(1, true); // Reiniciar a página 1
+    },
+
+    // MÉTODO AUXILIAR PARA PAGINACIÓN INTELIGENTE
+    getPaginationRange() {
+      const current = this.pagination.current_page;
+      const total = this.pagination.total_pages;
+      const range = [];
+
+      // Mostrar páginas alrededor de la actual
+      let start = Math.max(2, current - 1);
+      let end = Math.min(total - 1, current + 1);
+
+      // Ajustar rango si estamos cerca del inicio o final
+      if (current <= 3) {
+        end = Math.min(total - 1, 4);
+      }
+      if (current >= total - 2) {
+        start = Math.max(2, total - 3);
+      }
+
+      for (let i = start; i <= end; i++) {
+        if (i !== 1 && i !== total) {
+          range.push(i);
+        }
+      }
+
+      return range;
     },
 
     async loadPostComplete(postId) {
