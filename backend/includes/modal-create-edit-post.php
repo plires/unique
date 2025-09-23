@@ -24,7 +24,7 @@
             <div id="editor" style="height: 300px;"></div>
           </div>
 
-          <!-- NUEVO CAMPO: YouTube URL -->
+          <!-- CAMPO: YouTube URL -->
           <div class="form-group">
             <label for="youtubeUrl">URL de YouTube (opcional)</label>
             <input
@@ -42,6 +42,22 @@
                 <i class="fas fa-check-circle"></i> URL válida detectada
               </small>
             </div>
+          </div>
+
+          <div class="form-group">
+            <label for="postLanguage">Idioma *</label>
+            <select
+              class="form-control"
+              id="postLanguage"
+              v-model="currentPost.language"
+              required>
+              <option value="">Seleccione un idioma</option>
+              <option value="es">🇪🇸 Español</option>
+              <option value="en">🇺🇸 English</option>
+            </select>
+            <small class="form-text text-muted">
+              Seleccione el idioma principal del contenido del post
+            </small>
           </div>
 
           <div class="form-group">

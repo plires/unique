@@ -13,6 +13,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   ResponseHelper::error('Método no permitido', null, 405);
 }
 
+var_dump($_POST);
+exit;
+
 try {
   if (empty($_POST['id'])) {
     ResponseHelper::error('ID de imagen es requerido');

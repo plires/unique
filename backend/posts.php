@@ -131,6 +131,7 @@ include_once('../includes/config.inc.php');
 
       <div class="row">
         <div class="col-md-12">
+
           <!-- Tabla de Posts -->
           <div class="table-responsive">
             <table class="table table-hover">
@@ -138,44 +139,60 @@ include_once('../includes/config.inc.php');
                 <tr>
                   <th>ID</th>
                   <th>Título</th>
-                  <th>Contenido</th>
-                  <th class="text-center">Imágenes</th>
-                  <th class="text-center">Videos</th>
-                  <th class="text-center">Fecha</th>
-                  <th class="text-center">Estado</th>
-                  <th class="text-center">Acciones</th>
+                  <th>Idioma</th>
+                  <th>Imágenes</th>
+                  <th>Videos</th>
+                  <th>Estado</th>
+                  <th>Fecha</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="post in filteredPosts" :key="post.id">
                   <td>{{ post.id }}</td>
                   <td>
-                    <strong>{{ post.title }}</strong>
+                    <div class="post-title" :title="post.title">
+                      {{ post.title.length > 50 ? post.title.substring(0, 50) + '...' : post.title }}
+                    </div>
+                    <small class="text-muted post-content" :title="stripHtml(post.content)">
+                      {{ stripHtml(post.content).length > 80 ? stripHtml(post.content).substring(0, 80) + '...' : stripHtml(post.content) }}
+                    </small>
                   </td>
                   <td>
-                    <div class="post-content" v-html="post.content"></div>
+                    <!-- Mostrar idioma con bandera -->
+                    <span v-if="post.language === 'es'" class="badge badge-primary" title="Español">
+                      🇪🇸 ES
+                    </span>
+                    <span v-else-if="post.language === 'en'" class="badge badge-success" title="English">
+                      🇺🇸 EN
+                    </span>
+                    <span v-else class="badge badge-secondary" title="Sin idioma definido">
+                      ❓ --
+                    </span>
                   </td>
-                  <td class="text-center">
-                    <span class="badge badge-info">{{ post.total_images || 0 }}</span>
+                  <td>
+                    <span class="badge badge-info">
+                      <i class="fas fa-images"></i> {{ post.total_images || 0 }}
+                    </span>
                   </td>
-                  <td class="text-center">
-                    <span class="badge badge-info">{{ post.total_videos || 0 }}</span>
+                  <td>
+                    <span class="badge" :class="post.total_videos > 0 ? 'badge-warning' : 'badge-light'">
+                      <i class="fas fa-video"></i> {{ post.total_videos || 0 }}
+                    </span>
                   </td>
-                  <td class="text-center">
+                  <td>
+                    <button
+                      @click="toggleStatus(post.id, post.status)"
+                      :class="['btn', 'btn-sm', post.status ? 'btn-success' : 'btn-outline-secondary']"
+                      :title="post.status ? 'Activo - Click para desactivar' : 'Inactivo - Click para activar'">
+                      <i :class="['fas', post.status ? 'fa-check-circle' : 'fa-times-circle']"></i>
+                      {{ post.status ? 'Activo' : 'Inactivo' }}
+                    </button>
+                  </td>
+                  <td>
                     <small>{{ formatDate(post.created_at) }}</small>
                   </td>
-                  <td class="text-center">
-                    <div class="custom-control custom-switch">
-                      <input
-                        @click="toggleStatus(post.id, post.status)"
-                        :checked="post.status == 1"
-                        type="checkbox"
-                        class="custom-control-input"
-                        :id="'switch' + post.id">
-                      <label class="custom-control-label" :for="'switch' + post.id"></label>
-                    </div>
-                  </td>
-                  <td class="text-center">
+                  <td>
                     <div class="btn-group" role="group">
                       <button @click="editPost(post.id)" class="btn btn-sm btn-outline-primary" title="Editar">
                         <i class="fas fa-edit"></i>
@@ -198,6 +215,7 @@ include_once('../includes/config.inc.php');
               </tbody>
             </table>
           </div>
+
         </div>
       </div>
     </div>

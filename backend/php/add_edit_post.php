@@ -2,6 +2,7 @@
 
 /**
  * API para crear y editar posts
+ * ACTUALIZADO: Incluye soporte para campo 'language'
  */
 
 require_once('../../includes/config.inc.php');
@@ -20,13 +21,19 @@ try {
   $data = [
     'title' => $_POST['title'] ?? '',
     'content' => $_POST['content'] ?? '',
-    'youtube_url' => $_POST['youtube_url'] ?? '',  // NUEVO CAMPO
+    'youtube_url' => $_POST['youtube_url'] ?? '',
+    'language' => $_POST['language'] ?? 'es', // NUEVO: Campo idioma con valor por defecto
     'status' => isset($_POST['status']) ? (int)$_POST['status'] : 1
   ];
 
   // Limpiar youtube_url si está vacío
   if (empty(trim($data['youtube_url']))) {
     $data['youtube_url'] = null;
+  }
+
+  // Validar idioma
+  if (!in_array($data['language'], ['es', 'en'])) {
+    ResponseHelper::validationError(['El idioma debe ser "es" o "en"']);
   }
 
   if (isset($_POST['edit']) && !empty($_POST['id'])) {

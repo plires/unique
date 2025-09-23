@@ -20,6 +20,7 @@ let postsApp = new Vue({
       title: "",
       content: "",
       youtube_url: "",
+      language: "es", // NUEVO: Campo idioma con valor por defecto
       active: true,
     },
     formErrors: [],
@@ -57,7 +58,8 @@ let postsApp = new Vue({
       return this.posts.filter(
         (post) =>
           post.title.toLowerCase().includes(query) ||
-          post.content.toLowerCase().includes(query)
+          post.content.toLowerCase().includes(query) ||
+          (post.language && post.language.toLowerCase().includes(query))
       );
     },
   },
@@ -69,6 +71,51 @@ let postsApp = new Vue({
   },
 
   methods: {
+    // === UTILIDADES ===
+    stripHtml(html) {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html;
+      return tmp.textContent || tmp.innerText || "";
+    },
+
+    formatDate(dateString) {
+      return new Date(dateString).toLocaleDateString("es-ES", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    },
+
+    showSuccess(message) {
+      this.messages = [message];
+      setTimeout(() => {
+        this.messages = [];
+      }, 5000);
+
+      if (typeof msgSuccess === "function") {
+        msgSuccess(message);
+      }
+    },
+
+    showError(message) {
+      console.error("Error:", message);
+      alert("Error: " + message); // Temporal - puedes mejorar esto
+    },
+
+    showLoader() {
+      if (typeof loader === "function") {
+        loader();
+      } else {
+        $("#loader").fadeIn(300);
+      }
+    },
+
+    hideLoader() {
+      $("#loader").fadeOut(500);
+    },
+
     // === VALIDACIÓN DE YOUTUBE ===
     validateYouTubeUrl() {
       if (!this.currentPost.youtube_url) {
@@ -129,21 +176,14 @@ let postsApp = new Vue({
       this.changePass = !this.changePass;
     },
 
-    // === CARGA DE DATOS ===
+    // === GESTIÓN DE POSTS ===
     async loadPosts() {
       try {
         this.showLoader();
         const response = await axios.get(
-          window.APP_CONFIG.API_BASE_URL + "php/getPosts.php?include_inactive=1"
+          window.APP_CONFIG.API_BASE_URL + "php/getPosts.php"
         );
-
-        // Procesar datos para asegurar contadores numéricos
-        this.posts = response.data.map((post) => ({
-          ...post,
-          // Asegurar que los contadores sean números
-          total_images: parseInt(post.total_images) || 0,
-          total_videos: parseInt(post.total_videos) || 0,
-        }));
+        this.posts = response.data;
       } catch (error) {
         this.showError(
           "Error al cargar posts: " +
@@ -151,62 +191,6 @@ let postsApp = new Vue({
         );
       } finally {
         this.hideLoader();
-      }
-    },
-
-    // === NUEVOS MÉTODOS PARA ACTUALIZACIÓN REACTIVA ===
-
-    /**
-     * NUEVO: Actualizar contadores específicos de un post sin recargar toda la lista
-     */
-    async refreshPostCounts(postId) {
-      try {
-        const response = await axios.get(
-          window.APP_CONFIG.API_BASE_URL + `php/getPost.php?id=${postId}`
-        );
-
-        if (response.data) {
-          const updatedPost = response.data;
-
-          // Contar imágenes del post actualizado
-          let totalImages = 0;
-          if (updatedPost.images) {
-            Object.values(updatedPost.images).forEach((typeImages) => {
-              if (Array.isArray(typeImages)) {
-                totalImages += typeImages.length;
-              }
-            });
-          }
-
-          // Contar videos (1 si hay URL de YouTube)
-          const totalVideos =
-            updatedPost.youtube_url && updatedPost.youtube_url.trim() !== ""
-              ? 1
-              : 0;
-
-          // Actualizar el post en la lista de manera reactiva
-          this.updatePostInList(postId, {
-            total_images: totalImages,
-            total_videos: totalVideos,
-          });
-        }
-      } catch (error) {
-        console.error("Error al actualizar contadores:", error);
-        // No mostrar error al usuario para esta operación en segundo plano
-      }
-    },
-
-    /**
-     * NUEVO: Actualizar un post específico en la lista de manera reactiva
-     */
-    updatePostInList(postId, updateData) {
-      const postIndex = this.posts.findIndex((p) => p.id === parseInt(postId));
-      if (postIndex !== -1) {
-        // Usar Vue.set para asegurar reactividad
-        this.$set(this.posts, postIndex, {
-          ...this.posts[postIndex],
-          ...updateData,
-        });
       }
     },
 
@@ -228,7 +212,6 @@ let postsApp = new Vue({
       }
     },
 
-    // === GESTIÓN DE POSTS ===
     openCreateModal() {
       this.isEditing = false;
       this.modalTitle = "Crear Post";
@@ -236,11 +219,12 @@ let postsApp = new Vue({
         id: null,
         title: "",
         content: "",
-        youtube_url: "", // NUEVO CAMPO
+        youtube_url: "",
+        language: "es", // NUEVO: Valor por defecto español
         active: true,
       };
       this.formErrors = [];
-      this.youtubePreview = false; // RESET VALIDACIÓN
+      this.youtubePreview = false;
 
       // Limpiar editor
       if (this.quillEditor) {
@@ -251,7 +235,6 @@ let postsApp = new Vue({
     },
 
     async editPost(postId) {
-      // ✅ CORRECTO: Cargar datos completos del post
       const postData = await this.loadPostComplete(postId);
       if (!postData) return;
 
@@ -261,7 +244,8 @@ let postsApp = new Vue({
         id: postData.id,
         title: postData.title,
         content: postData.content,
-        youtube_url: postData.youtube_url || "", // NUEVO CAMPO
+        youtube_url: postData.youtube_url || "",
+        language: postData.language || "es", // NUEVO: Campo idioma con fallback
         active: postData.status == 1,
       };
       this.formErrors = [];
@@ -277,23 +261,32 @@ let postsApp = new Vue({
       $("#postModal").modal("show");
     },
 
-    /**
-     * MODIFICADO: submitPost() - mantener funcionalidad existente + actualizar contadores
-     */
     async submitPost(e) {
       e.preventDefault();
 
-      // MANTENER: Obtener contenido del editor
+      // Obtener contenido del editor
       const content = this.quillEditor
         ? this.quillEditor.root.innerHTML
         : this.currentPost.content;
 
-      // MANTENER: Preparar datos del formulario
+      // NUEVO: Validar campos requeridos incluyendo idioma
+      if (!this.currentPost.title.trim()) {
+        this.formErrors = ["El título es obligatorio"];
+        return;
+      }
+
+      if (!this.currentPost.language) {
+        this.formErrors = ["El idioma es obligatorio"];
+        return;
+      }
+
+      // Preparar datos del formulario
       const formData = new FormData();
       formData.append("title", this.currentPost.title);
       formData.append("content", content);
-      formData.append("youtube_url", this.currentPost.youtube_url || ""); // MANTENER campo YouTube
-      formData.append("active", this.currentPost.active ? 1 : 0);
+      formData.append("youtube_url", this.currentPost.youtube_url || "");
+      formData.append("language", this.currentPost.language); // NUEVO: Campo idioma
+      formData.append("status", this.currentPost.active ? 1 : 0);
 
       if (this.isEditing) {
         formData.append("edit", "true");
@@ -301,33 +294,29 @@ let postsApp = new Vue({
       }
 
       try {
-        this.showLoader(); // MANTENER
+        this.showLoader();
 
         await axios.post(
           window.APP_CONFIG.API_BASE_URL + "php/add_edit_post.php",
           formData
         );
 
-        $("#postModal").modal("hide"); // MANTENER
+        $("#postModal").modal("hide");
 
         const message = this.isEditing
           ? "Post actualizado exitosamente"
           : "Post creado exitosamente";
-        this.showSuccess(message); // MANTENER
+        this.showSuccess(message);
 
-        // MODIFICADO: Recargar posts para obtener contadores actualizados
         await this.loadPosts();
 
-        // NUEVO: Si estamos editando, también actualizar contadores específicos
-        // (especialmente importante si se cambió la URL de YouTube)
+        // Si estamos editando, actualizar contadores específicos
         if (this.isEditing && this.currentPost.id) {
-          // Pequeño delay para asegurar que el servidor procesó los cambios
           setTimeout(async () => {
             await this.refreshPostCounts(this.currentPost.id);
           }, 500);
         }
       } catch (error) {
-        // MANTENER: Manejo de errores existente
         if (error.response?.data?.errors) {
           this.formErrors = error.response.data.errors;
         } else {
@@ -337,7 +326,7 @@ let postsApp = new Vue({
           );
         }
       } finally {
-        this.hideLoader(); // MANTENER
+        this.hideLoader();
       }
     },
 
@@ -365,175 +354,7 @@ let postsApp = new Vue({
       }
     },
 
-    // === GESTIÓN DE MEDIOS ===
-    async manageMedia(postId) {
-      const postData = await this.loadPostComplete(postId);
-      if (!postData) {
-        console.error("No se pudo cargar post data");
-        return;
-      }
-
-      // Método alternativo: crear objeto completamente nuevo
-      const newCurrentMediaPost = {
-        id: parseInt(postData.id), // Forzar conversión a entero
-        title: String(postData.title || ""),
-        images: postData.images || {
-          listing: [],
-          header: [],
-          content: [],
-        },
-      };
-
-      // Asignar el objeto completo
-      this.currentMediaPost = newCurrentMediaPost;
-
-      this.newImage = {
-        type: "content",
-        alt_text: "",
-      };
-
-      $("#mediaModal").modal("show");
-    },
-
-    // === MÉTODOS DE GESTIÓN DE MEDIOS MODIFICADOS ===
-
-    /**
-     * MODIFICADO: uploadImage() - mantener funcionalidad existente + actualizar contadores
-     */
-    async uploadImage(e) {
-      e.preventDefault();
-
-      const fileInput = this.$refs.imageFile;
-      if (!fileInput.files.length) {
-        this.showError("Seleccione un archivo");
-        return;
-      }
-
-      // MANTENER: Validación existente
-      if (!this.currentMediaPost || !this.currentMediaPost.id) {
-        console.error("ERROR CRÍTICO: currentMediaPost.id no está definido");
-        console.error("currentMediaPost:", this.currentMediaPost);
-        this.showError(
-          "Error: No se puede identificar el post. Cierre y vuelva a abrir el modal."
-        );
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("image", fileInput.files[0]);
-      formData.append("post_id", this.currentMediaPost.id);
-      formData.append("type", this.newImage.type);
-      formData.append("alt_text", this.newImage.alt_text);
-
-      try {
-        this.showLoader(); // MANTENER
-
-        await axios.post(
-          window.APP_CONFIG.API_BASE_URL + "php/uploadImage.php",
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-
-        this.showSuccess("Imagen subida exitosamente"); // MANTENER
-
-        // MANTENER: Recargar medios del modal
-        const postIdToReload = this.currentMediaPost.id;
-        const updatedPost = await this.loadPostComplete(postIdToReload);
-        if (updatedPost) {
-          this.currentMediaPost.images = updatedPost.images || {
-            listing: [],
-            header: [],
-            content: [],
-          };
-        }
-
-        // NUEVO: Actualizar contadores en la tabla principal de manera reactiva
-        await this.refreshPostCounts(this.currentMediaPost.id);
-
-        // MANTENER: Limpiar formulario
-        fileInput.value = "";
-        this.newImage.alt_text = "";
-      } catch (error) {
-        console.error("Error en uploadImage:", error);
-        this.showError(
-          "Error al subir imagen: " +
-            (error.response?.data?.message || error.message)
-        );
-      } finally {
-        this.hideLoader(); // MANTENER
-      }
-    },
-
-    /**
-     * MODIFICADO: deleteImage() - mantener funcionalidad existente + actualizar contadores
-     */
-    async deleteImage(imageId) {
-      if (!confirm("¿Está seguro de eliminar esta imagen?")) {
-        return;
-      }
-
-      console.log("=== INICIO deleteImage ===");
-      console.log("Image ID:", imageId);
-      console.log("currentMediaPost:", this.currentMediaPost);
-
-      // MANTENER: Validación existente
-      if (!this.currentMediaPost || !this.currentMediaPost.id) {
-        console.error(
-          "ERROR: currentMediaPost.id no está definido en deleteImage"
-        );
-        this.showError(
-          "Error: No se puede identificar el post. Cierre y vuelva a abrir el modal."
-        );
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("id", imageId);
-
-      try {
-        this.showLoader(); // MANTENER
-
-        await axios.post(
-          window.APP_CONFIG.API_BASE_URL + "php/deleteImage.php",
-          formData
-        );
-
-        this.showSuccess("Imagen eliminada exitosamente"); // MANTENER
-
-        // MANTENER: Recargar datos del post con ID validado
-        const postIdToReload = this.currentMediaPost.id;
-        console.log("Recargando post después de eliminar, ID:", postIdToReload);
-
-        const updatedPost = await this.loadPostComplete(postIdToReload);
-        if (updatedPost) {
-          this.currentMediaPost.images = updatedPost.images || {
-            listing: [],
-            header: [],
-            content: [],
-          };
-          console.log("Post recargado después de eliminar");
-        }
-
-        // NUEVO: Actualizar contadores en la tabla principal de manera reactiva
-        await this.refreshPostCounts(this.currentMediaPost.id);
-
-        console.log("=== deleteImage completado ===");
-      } catch (error) {
-        console.error("Error en deleteImage:", error);
-        this.showError(
-          "Error al eliminar imagen: " +
-            (error.response?.data?.message || error.message)
-        );
-      } finally {
-        this.hideLoader(); // MANTENER
-      }
-    },
-
-    // === ELIMINACIÓN ===
+    // === GESTIÓN DE ELIMINACIÓN ===
     setPostToDelete(postId) {
       this.postToDelete = postId;
     },
@@ -553,8 +374,6 @@ let postsApp = new Vue({
         );
 
         $("#deleteModal").modal("hide");
-        this.postToDelete = null;
-
         this.showSuccess("Post eliminado exitosamente");
         await this.loadPosts();
       } catch (error) {
@@ -564,81 +383,201 @@ let postsApp = new Vue({
         );
       } finally {
         this.hideLoader();
+        this.postToDelete = null;
       }
     },
 
-    // === UTILIDADES ===
-    getImageUrl(imagePath) {
-      return window.APP_CONFIG.FRONTEND_URL + "/" + imagePath;
+    // === GESTIÓN DE MEDIOS ===
+    async manageMedia(postId) {
+      const postData = await this.loadPostComplete(postId);
+      if (!postData) {
+        console.error("No se pudo cargar post data");
+        return;
+      }
+
+      const newCurrentMediaPost = {
+        id: parseInt(postData.id),
+        title: String(postData.title || ""),
+        images: postData.images || {
+          listing: [],
+          header: [],
+          content: [],
+        },
+      };
+
+      this.currentMediaPost = newCurrentMediaPost;
+      this.newImage = {
+        type: "content",
+        alt_text: "",
+      };
+
+      $("#mediaModal").modal("show");
     },
 
-    truncateContent(content, maxLength = 100) {
-      const text = content.replace(/<[^>]*>/g, "");
-      return text.length > maxLength
-        ? text.substring(0, maxLength) + "..."
-        : text;
-    },
+    async refreshPostCounts(postId) {
+      try {
+        const postData = await this.loadPostComplete(postId);
+        if (postData && postData.images) {
+          const totalImages = Object.values(postData.images).reduce(
+            (sum, typeImages) => sum + (typeImages ? typeImages.length : 0),
+            0
+          );
 
-    formatDate(dateString) {
-      if (!dateString) return "-";
-      const date = new Date(dateString);
-      return date.toLocaleDateString("es-ES", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    },
+          const totalVideos =
+            postData.youtube_url && postData.youtube_url.trim() !== "" ? 1 : 0;
 
-    initializeQuillEditor() {
-      this.$nextTick(() => {
-        if (document.getElementById("editor")) {
-          this.quillEditor = new Quill("#editor", {
-            theme: "snow",
-            modules: {
-              toolbar: [
-                [{ header: [1, 2, 3, false] }],
-                ["bold", "italic", "underline", "strike"],
-                [{ color: [] }, { background: [] }],
-                [{ list: "ordered" }, { list: "bullet" }],
-                ["blockquote", "code-block"],
-                ["link", "image"],
-                ["clean"],
-              ],
-            },
+          this.updatePostInList(postId, {
+            total_images: totalImages,
+            total_videos: totalVideos,
           });
         }
+      } catch (error) {
+        console.error("Error al actualizar contadores:", error);
+      }
+    },
+
+    updatePostInList(postId, updateData) {
+      const postIndex = this.posts.findIndex((p) => p.id === parseInt(postId));
+      if (postIndex !== -1) {
+        this.$set(this.posts, postIndex, {
+          ...this.posts[postIndex],
+          ...updateData,
+        });
+      }
+    },
+
+    async uploadImage(e) {
+      e.preventDefault();
+
+      const fileInput = this.$refs.imageFile;
+      if (!fileInput.files.length) {
+        this.showError("Seleccione un archivo");
+        return;
+      }
+
+      if (!this.currentMediaPost || !this.currentMediaPost.id) {
+        console.error("ERROR CRÍTICO: currentMediaPost.id no está definido");
+        this.showError(
+          "Error: No se puede identificar el post. Cierre y vuelva a abrir el modal."
+        );
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("image", fileInput.files[0]);
+      formData.append("post_id", this.currentMediaPost.id);
+      formData.append("type", this.newImage.type);
+      formData.append("alt_text", this.newImage.alt_text);
+
+      try {
+        this.showLoader();
+
+        await axios.post(
+          window.APP_CONFIG.API_BASE_URL + "php/uploadImage.php",
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        this.showSuccess("Imagen subida exitosamente");
+
+        const postIdToReload = this.currentMediaPost.id;
+        const updatedPost = await this.loadPostComplete(postIdToReload);
+        if (updatedPost) {
+          this.currentMediaPost.images = updatedPost.images || {
+            listing: [],
+            header: [],
+            content: [],
+          };
+        }
+
+        await this.refreshPostCounts(this.currentMediaPost.id);
+
+        fileInput.value = "";
+        this.newImage.alt_text = "";
+      } catch (error) {
+        console.error("Error en uploadImage:", error);
+        this.showError(
+          "Error al subir imagen: " +
+            (error.response?.data?.message || error.message)
+        );
+      } finally {
+        this.hideLoader();
+      }
+    },
+
+    async deleteImage(imageId) {
+      if (!confirm("¿Está seguro de eliminar esta imagen?")) return;
+
+      try {
+        this.showLoader();
+
+        await axios.post(
+          window.APP_CONFIG.API_BASE_URL + "php/deleteImage.php",
+          { id: imageId }
+        );
+
+        this.showSuccess("Imagen eliminada exitosamente");
+
+        const postIdToReload = this.currentMediaPost.id;
+        const updatedPost = await this.loadPostComplete(postIdToReload);
+        if (updatedPost) {
+          this.currentMediaPost.images = updatedPost.images || {
+            listing: [],
+            header: [],
+            content: [],
+          };
+        }
+
+        await this.refreshPostCounts(this.currentMediaPost.id);
+      } catch (error) {
+        this.showError(
+          "Error al eliminar imagen: " +
+            (error.response?.data?.message || error.message)
+        );
+      } finally {
+        this.hideLoader();
+      }
+    },
+
+    getImageUrl(imagePath) {
+      if (!imagePath) return "";
+
+      // Si ya es una URL completa, devolverla
+      if (imagePath.startsWith("http")) return imagePath;
+
+      // Construir URL relativa
+      return window.APP_CONFIG.API_BASE_URL + "../" + imagePath;
+    },
+
+    // === INICIALIZACIÓN DEL EDITOR ===
+    initializeQuillEditor() {
+      const toolbarOptions = [
+        ["bold", "italic", "underline", "strike"],
+        ["blockquote", "code-block"],
+        [{ header: 1 }, { header: 2 }],
+        [{ list: "ordered" }, { list: "bullet" }],
+        [{ script: "sub" }, { script: "super" }],
+        [{ indent: "-1" }, { indent: "+1" }],
+        [{ size: ["small", false, "large", "huge"] }],
+        [{ header: [1, 2, 3, 4, 5, 6, false] }],
+        [{ color: [] }, { background: [] }],
+        [{ font: [] }],
+        [{ align: [] }],
+        ["clean"],
+        ["link"],
+      ];
+
+      this.quillEditor = new Quill("#editor", {
+        modules: {
+          toolbar: toolbarOptions,
+        },
+        placeholder: "Escriba el contenido del post aquí...",
+        theme: "snow",
       });
-    },
-
-    // === MENSAJES Y LOADER ===
-    showLoader() {
-      if (typeof loader === "function") {
-        loader();
-      } else {
-        $("#loader").fadeIn(300);
-      }
-    },
-
-    hideLoader() {
-      $("#loader").fadeOut(500);
-    },
-
-    showSuccess(message) {
-      this.messages = [message];
-      setTimeout(() => {
-        this.messages = [];
-      }, 5000);
-
-      if (typeof msgSuccess === "function") {
-        msgSuccess(message);
-      }
-    },
-
-    showError(message) {
-      console.error("Error:", message);
-      alert("Error: " + message); // Temporal - puedes mejorar esto
     },
   },
 });

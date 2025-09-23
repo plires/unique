@@ -2,6 +2,7 @@
 
 /**
  * Modelo para la gestión de Posts
+ * ACTUALIZADO: Incluye soporte completo para campo 'language'
  */
 
 require_once 'BaseCRUD.php';
@@ -13,6 +14,7 @@ class Posts extends BaseCRUD
     'title',
     'content',
     'youtube_url',
+    'language', // NUEVO: Campo idioma
     'status'
   ];
 
@@ -24,7 +26,7 @@ class Posts extends BaseCRUD
   }
 
   /**
-   * Obtener posts con información de medios asociados (MODIFICADO para incluir videos)
+   * Obtener posts con información de medios asociados (ACTUALIZADO para incluir language)
    */
   public function getPostsWithMedia($includeInactive = false)
   {
@@ -36,11 +38,11 @@ class Posts extends BaseCRUD
             p.title,
             p.content,
             p.youtube_url,
+            p.language,
             p.status,
             p.created_at,
             p.updated_at,
             COUNT(DISTINCT i.id) as total_images,
-            -- NUEVO: Contar videos basado en URL de YouTube
             CASE 
                 WHEN p.youtube_url IS NOT NULL AND p.youtube_url != '' THEN 1 
                 ELSE 0 
@@ -51,11 +53,85 @@ class Posts extends BaseCRUD
         FROM posts p
         LEFT JOIN post_images i ON p.id = i.post_id AND i.status = 1
         {$statusCondition}
-        GROUP BY p.id, p.youtube_url  -- NUEVO: Agregar youtube_url al GROUP BY
+        GROUP BY p.id, p.youtube_url, p.language
         ORDER BY p.created_at DESC
     ";
 
     return $this->query($sql);
+  }
+
+  /**
+   * Obtener posts filtrados por idioma para el front público
+   */
+  public function getPostsForPublic($limit = null, $page = 1, $language = null)
+  {
+    $conditions = ['p.status = 1'];
+    $params = [];
+
+    // Filtrar por idioma si se especifica
+    if ($language) {
+      $conditions[] = 'p.language = :language';
+      $params['language'] = $language;
+    }
+
+    $whereClause = 'WHERE ' . implode(' AND ', $conditions);
+
+    $sql = "
+          SELECT 
+              p.id,
+              p.title,
+              p.content,
+              p.youtube_url,
+              p.language,
+              p.created_at,
+              p.updated_at,
+              COUNT(DISTINCT i.id) as total_images,
+              GROUP_CONCAT(DISTINCT CASE WHEN i.type = 'listing' THEN i.filename END) as listing_image,
+              GROUP_CONCAT(DISTINCT CASE WHEN i.type = 'header' THEN i.filename END) as header_image,
+              COUNT(CASE WHEN i.type = 'content' THEN 1 END) as content_images_count
+          FROM posts p
+          LEFT JOIN post_images i ON p.id = i.post_id AND i.status = 1
+          {$whereClause}
+          GROUP BY p.id
+          ORDER BY p.created_at DESC
+      ";
+
+    // Agregar paginación si se especifica límite
+    if ($limit) {
+      $offset = ($page - 1) * $limit;
+      $sql .= " LIMIT {$limit} OFFSET {$offset}";
+    }
+
+    $posts = $this->db->fetchAll($sql, $params);
+
+    // Si hay paginación, obtener total para metadatos
+    if ($limit) {
+      $countConditions = ['status = 1'];
+      $countParams = [];
+
+      if ($language) {
+        $countConditions[] = 'language = :language';
+        $countParams['language'] = $language;
+      }
+
+      $countWhere = implode(' AND ', $countConditions);
+      $totalPosts = $this->count($countWhere, $countParams);
+      $totalPages = ceil($totalPosts / $limit);
+
+      return [
+        'data' => $posts,
+        'pagination' => [
+          'current_page' => $page,
+          'total_pages' => $totalPages,
+          'total_posts' => $totalPosts,
+          'per_page' => $limit,
+          'has_next' => $page < $totalPages,
+          'has_prev' => $page > 1
+        ]
+      ];
+    }
+
+    return $posts;
   }
 
   /**
@@ -115,7 +191,7 @@ class Posts extends BaseCRUD
   }
 
   /**
-   * Crear post con validaciones
+   * Crear post con validaciones (ACTUALIZADO)
    */
   public function createPost($data)
   {
@@ -127,6 +203,7 @@ class Posts extends BaseCRUD
 
     // Establecer valores por defecto
     $data['status'] = $data['status'] ?? 1;
+    $data['language'] = $data['language'] ?? 'es'; // NUEVO: Valor por defecto
 
     // Validar y limpiar URL de YouTube si se proporciona
     if (!empty($data['youtube_url'])) {
@@ -146,7 +223,7 @@ class Posts extends BaseCRUD
   }
 
   /**
-   * Actualizar post con validaciones
+   * Actualizar post con validaciones (ACTUALIZADO)
    */
   public function updatePost($id, $data)
   {
@@ -178,7 +255,7 @@ class Posts extends BaseCRUD
   }
 
   /**
-   * Validar datos del post
+   * Validar datos del post (ACTUALIZADO para incluir language)
    */
   private function validatePostData($data, $id = null)
   {
@@ -196,16 +273,27 @@ class Posts extends BaseCRUD
       $errors[] = 'El contenido es obligatorio';
     }
 
-    // Validar que el título sea único (excluyendo el post actual si es edición)
-    $sql = "SELECT id FROM posts WHERE title = :title" . ($id ? " AND id != :id" : "");
-    $params = ['title' => $data['title']];
+    // NUEVO: Validar idioma
+    if (empty($data['language'])) {
+      $errors[] = 'El idioma es obligatorio';
+    } elseif (!in_array($data['language'], ['es', 'en'])) {
+      $errors[] = 'El idioma debe ser "es" (Español) o "en" (English)';
+    }
+
+    // Validar que el título sea único POR IDIOMA (excluyendo el post actual si es edición)
+    $sql = "SELECT id FROM posts WHERE title = :title AND language = :language" . ($id ? " AND id != :id" : "");
+    $params = [
+      'title' => $data['title'],
+      'language' => $data['language']
+    ];
     if ($id) {
       $params['id'] = $id;
     }
 
     $existing = $this->db->fetch($sql, $params);
     if ($existing) {
-      $errors[] = 'Ya existe un post con este título';
+      $languageName = $data['language'] === 'es' ? 'español' : 'inglés';
+      $errors[] = "Ya existe un post con este título en {$languageName}";
     }
 
     return $errors;
@@ -238,27 +326,37 @@ class Posts extends BaseCRUD
   }
 
   /**
-   * Extraer ID de video de YouTube
+   * Eliminar post con todas sus imágenes asociadas
    */
-  public function getYouTubeVideoId($url)
+  public function deletePost($id)
   {
-    if (empty($url)) {
-      return null;
-    }
+    try {
+      $this->db->beginTransaction();
 
-    $patterns = [
-      '/youtube\.com\/watch\?v=([^&\n]+)/',
-      '/youtube\.com\/embed\/([^&\n]+)/',
-      '/youtu\.be\/([^&\n]+)/'
-    ];
+      // Obtener y eliminar todas las imágenes asociadas
+      require_once 'PostImages.php';
+      $postImages = new PostImages();
+      $images = $postImages->getWhere('post_id = :post_id', ['post_id' => $id]);
 
-    foreach ($patterns as $pattern) {
-      if (preg_match($pattern, $url, $matches)) {
-        return $matches[1];
+      foreach ($images as $image) {
+        $postImages->deleteImage($image['id']);
       }
-    }
 
-    return null;
+      // Eliminar el post
+      $success = $this->delete($id);
+
+      if ($success) {
+        $this->db->commit();
+        return ['success' => true];
+      } else {
+        $this->db->rollback();
+        return ['success' => false, 'errors' => ['Error al eliminar el post']];
+      }
+    } catch (Exception $e) {
+      $this->db->rollback();
+      error_log("Error al eliminar post: " . $e->getMessage());
+      return ['success' => false, 'errors' => ['Error interno al eliminar el post']];
+    }
   }
 
   /**
@@ -270,112 +368,39 @@ class Posts extends BaseCRUD
   }
 
   /**
-   * Obtener URL de miniatura de YouTube
+   * NUEVO: Obtener estadísticas de posts por idioma
    */
-  public function getYouTubeThumbnail($url)
-  {
-    $videoId = $this->getYouTubeVideoId($url);
-    if ($videoId) {
-      return "https://img.youtube.com/vi/{$videoId}/maxresdefault.jpg";
-    }
-    return null;
-  }
-
-  /**
-   * Eliminar post y todos sus medios asociados
-   */
-  public function deletePost($id)
-  {
-    try {
-      $this->db->getConnection()->beginTransaction();
-
-      // Eliminar imágenes asociadas
-      $images = $this->db->fetchAll(
-        "SELECT * FROM post_images WHERE post_id = :post_id",
-        ['post_id' => $id]
-      );
-
-      foreach ($images as $image) {
-        // Eliminar archivo físico
-        $imagePath = $image['file_path'];
-        if (file_exists($imagePath)) {
-          unlink($imagePath);
-        }
-      }
-
-      // Eliminar registros de imágenes
-      $this->db->execute(
-        "DELETE FROM post_images WHERE post_id = :post_id",
-        ['post_id' => $id]
-      );
-
-      // Eliminar el post
-      $success = $this->delete($id);
-
-      if ($success) {
-        $this->db->getConnection()->commit();
-        return ['success' => true];
-      } else {
-        $this->db->getConnection()->rollBack();
-        return ['success' => false, 'errors' => ['Error al eliminar el post']];
-      }
-    } catch (Exception $e) {
-      $this->db->getConnection()->rollBack();
-      error_log("Error eliminando post: " . $e->getMessage());
-      return ['success' => false, 'errors' => ['Error interno al eliminar el post']];
-    }
-  }
-
-  /**
-   * Obtener posts activos para el front público con paginación opcional
-   */
-  public function getPostsForPublic($limit = null, $page = 1)
+  public function getLanguageStats()
   {
     $sql = "
-          SELECT 
-              p.id,
-              p.title,
-              p.content,
-              p.youtube_url,
-              p.created_at,
-              p.updated_at,
-              COUNT(DISTINCT i.id) as total_images,
-              GROUP_CONCAT(DISTINCT CASE WHEN i.type = 'listing' THEN i.filename END) as listing_image,
-              GROUP_CONCAT(DISTINCT CASE WHEN i.type = 'header' THEN i.filename END) as header_image,
-              COUNT(CASE WHEN i.type = 'content' THEN 1 END) as content_images_count
-          FROM posts p
-          LEFT JOIN post_images i ON p.id = i.post_id AND i.status = 1
-          WHERE p.status = 1
-          GROUP BY p.id
-          ORDER BY p.created_at DESC
-      ";
+        SELECT 
+            language,
+            COUNT(*) as total,
+            COUNT(CASE WHEN status = 1 THEN 1 END) as active,
+            COUNT(CASE WHEN status = 0 THEN 1 END) as inactive
+        FROM posts
+        GROUP BY language
+        ORDER BY language
+    ";
 
-    // Agregar paginación si se especifica límite
-    if ($limit) {
-      $offset = ($page - 1) * $limit;
-      $sql .= " LIMIT {$limit} OFFSET {$offset}";
+    return $this->query($sql);
+  }
+
+  /**
+   * NUEVO: Buscar posts por idioma y texto
+   */
+  public function searchPosts($query, $language = null)
+  {
+    $conditions = ['(title LIKE :query OR content LIKE :query)'];
+    $params = ['query' => "%{$query}%"];
+
+    if ($language) {
+      $conditions[] = 'language = :language';
+      $params['language'] = $language;
     }
 
-    $posts = $this->query($sql);
+    $where = implode(' AND ', $conditions);
 
-    // Si hay paginación, obtener total para metadatos
-    if ($limit) {
-      $totalPosts = $this->count('status = 1');
-      $totalPages = ceil($totalPosts / $limit);
-
-      return [
-        'data' => $posts,
-        'pagination' => [
-          'current_page' => $page,
-          'total_pages' => $totalPages,
-          'total_posts' => $totalPosts,
-          'per_page' => $limit,
-          'has_next' => $page < $totalPages,
-          'has_prev' => $page > 1
-        ]
-      ];
-    }
-
-    return $posts;
+    return $this->getWhere($where, $params, 'created_at', 'DESC');
   }
 }
