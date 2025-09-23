@@ -18,7 +18,7 @@ class PostsPublic
   /**
    * Obtener los últimos N posts activos con su imagen de listado
    */
-  public function getLatestPosts($limit = 3)
+  public function getLatestPosts($limit = 3, $language = 'es')
   {
     $sql = "
         SELECT 
@@ -38,11 +38,16 @@ class PostsPublic
             AND i.status = 1
         )
         WHERE p.status = 1
+        AND p.language = '" . $language . "'
         ORDER BY p.created_at DESC
         LIMIT :limit
     ";
 
-    return $this->db->fetchAll($sql, ['limit' => $limit]);
+    return $this->db->fetchAll($sql, [
+      'limit' => $limit
+    ]);
+
+    // return $this->db->fetchAll($sql, ['limit' => $limit]);
   }
 
   /**

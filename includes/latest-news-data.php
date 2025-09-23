@@ -19,7 +19,8 @@ try {
   $postsPublic = new PostsPublic();
 
   // Obtener los últimos 3 posts
-  $latestPosts = $postsPublic->getLatestPosts(3);
+  $currentLang = isset($_SESSION['lang']) ? $_SESSION['lang'] : 'es';
+  $latestPosts = $postsPublic->getLatestPosts(3, $currentLang);
 
   // Verificar si hay posts disponibles
   $hasLatestPosts = !empty($latestPosts);
