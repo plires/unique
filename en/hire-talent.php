@@ -55,40 +55,7 @@ require_once("../clases/repositorioSQL.php");
 	<!-- Mensajes end -->
 
 	<!-- Header -->
-	<header class="container transition">
-
-		<div class="menu_bar">
-			<a href="./">
-				<img class="transition" src="../img/logo-unique.png" alt="logo unique">
-			</a>
-			<button class="transition" id="btn-menu-mobile" type="button"><i class="fas fa-bars"></i></button>
-		</div>
-		<div class="content_navegacion">
-			<nav>
-				<ul>
-					<li><a class="btn_nav transition" href="./#equipo">ABOUT</a></li>
-					<li><a class="btn_nav transition" href="./#servicios">SERVICES</a></li>
-					<li><a class="transition" href="https://unique.hiringroom.com/jobs" target="_blank" rel="noopener noreferrer">JOB OFFERS</a></li>
-					<li><a class="transition" href="hire-talent.php">HIRE A TALENT</a></li>
-					<li><a class="btn_nav transition" href="./#contacto">CONTACT</a></li>
-				</ul>
-			</nav>
-			<div class="languages_rrss">
-				<div>
-					<?php $activeES = $_SESSION['lang'] == 'es' ? 'active' : ''; ?>
-					<?php $activeEN = $_SESSION['lang'] == 'en' ? 'active' : ''; ?>
-					<a class="transition <?= $activeEN ?>" href="#">ENG</a>
-					<a class="transition <?= $activeES ?>" href="../busca-talento.php">SPA</a>
-				</div>
-				<div>
-					<a class="transition" href="https://www.instagram.com/unqtalent/" target="_blank"><i class="fab fa-instagram-square"></i></a>
-					<a class="transition" href="https://www.linkedin.com/company/unqtalent/about/" target="_blank"><i class="fab fa-linkedin"></i></a>
-					<a class="transition" href="https://api.whatsapp.com/send?phone=+5491157550306&text=Hola!%20Necesito%20hacer%20una%20consulta!" target="_blank"><i class="fab fa-whatsapp-square"></i></a>
-				</div>
-			</div>
-		</div>
-	</header>
-	<!-- Header end -->
+	<?php include('../includes/header.inc.php'); ?>
 
 	<!-- Slide -->
 	<div class="img_principal container-fluid p-0">
