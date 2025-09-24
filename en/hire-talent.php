@@ -249,8 +249,8 @@ require_once("../clases/repositorioSQL.php");
 	</section>
 	<!-- Contacto end -->
 
-	<!-- Footer EN -->
-	<?php include('../includes/footer-en.php') ?>
+	<!-- Footer -->
+	<?php include('../includes/footer.inc.php'); ?>
 
 	<script src="../node_modules/jquery/dist/jquery.min.js"></script>
 	<script src="../node_modules/bootstrap/dist/js/bootstrap.min.js"></script>

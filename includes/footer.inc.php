@@ -1,62 +1,43 @@
-<?php
-
-/**
- * Footer reutilizable para todas las páginas
- */
-
-$currentLang = isset($_SESSION['lang']) ? $_SESSION['lang'] : 'es';
-?>
-
 <!-- Footer -->
-<footer>
+<footer class="container-fluid">
   <div class="container">
     <div class="row">
-      <div class="col-lg-4 col-md-6 mb-4">
-        <div class="footer-logo">
-          <img src="img/logo-unique-footer.png" alt="Unique Talent Solutions">
-        </div>
-        <p class="footer-description">
-          <?php if ($currentLang === 'es'): ?>
-            Reclutamos talentos para la industria del Turismo y Hotelería
-          <?php else: ?>
-            We recruit talents for the Tourism and Hospitality industry
-          <?php endif; ?>
+      <div class="col-md-5">
+        <img class="img-fluid" src="img/logo-unique-footer.png" alt="logo unique footer">
+        <p>
+          All rights reserved &copy; <?= date('Y') ?> <br />
+          UNIQUE - Talent Solutions.
         </p>
       </div>
-      <div class="col-lg-2 col-md-6 mb-4">
-        <h5><?php echo $currentLang === 'es' ? 'Enlaces' : 'Links'; ?></h5>
-        <ul class="footer-links">
-          <li><a href="/"><?php echo $currentLang === 'es' ? 'Inicio' : 'Home'; ?></a></li>
-          <li><a href="/#equipo"><?php echo $currentLang === 'es' ? 'Equipo' : 'Team'; ?></a></li>
-          <li><a href="/#servicios"><?php echo $currentLang === 'es' ? 'Servicios' : 'Services'; ?></a></li>
-          <li><a href="/blog.php">Blog</a></li>
+
+      <div class="col-md-7 text-right">
+        <ul>
+          <li>
+            <a class="transition" href="https://unique.hiringroom.com/jobs" target="_blank" rel="noopener noreferrer">Empleos</a>
+          </li>
+          <li>
+            <a class="transition" href="busca-talento.php">Talentos</a>
+          </li>
+          <li>
+            <a class="transition btn_nav" href="./#contacto">Contacto</a>
+          </li>
+          <li class="mt-2"><a class="transition btn_nav" target="_blank" href="https://api.whatsapp.com/send?phone=+5491157550306&text=Hola!%20Necesito%20hacer%20una%20consulta!">+54 9 115 755 0306 <i class="fab fa-whatsapp-square ml-2"></i></a>
+          </li>
+          <li>
+            <a class="transition btn_nav" target="_blank" href="https://www.instagram.com/unqtalent/">Instagram <i class="ml-2 fab fa-instagram-square"></i></a>
+          </li>
+          <li>
+            <a class="transition btn_nav" target="_blank" href="https://www.linkedin.com/company/unqtalent/about/">Linkedin <i class="ml-2 fab fa-linkedin"></i></a>
+          </li>
+          <li>
+            <a class="transition btn_nav" href="https://www.youtube.com/channel/UCy4f2I06PEwGFlZKqvDLRFA" target="_blank" rel="noopener noreferrer">
+              Youtube <i class="fab fa-youtube-square"></i>
+            </a>
+          </li>
         </ul>
       </div>
-      <div class="col-lg-3 col-md-6 mb-4">
-        <h5><?php echo $currentLang === 'es' ? 'Servicios' : 'Services'; ?></h5>
-        <ul class="footer-links">
-          <li><a href="https://unique.hiringroom.com/jobs" target="_blank"><?php echo $currentLang === 'es' ? 'Empleos' : 'Jobs'; ?></a></li>
-          <li><a href="/busca-talento.php"><?php echo $currentLang === 'es' ? 'Talentos' : 'Talents'; ?></a></li>
-        </ul>
-      </div>
-      <div class="col-lg-3 col-md-6 mb-4">
-        <h5><?php echo $currentLang === 'es' ? 'Síguenos' : 'Follow Us'; ?></h5>
-        <div class="footer-social">
-          <a href="https://www.linkedin.com/company/unique-talent-solutions/" target="_blank" rel="noopener noreferrer">
-            <i class="fab fa-linkedin-in"></i>
-          </a>
-          <a href="https://www.instagram.com/uniquetalentsolutions/" target="_blank" rel="noopener noreferrer">
-            <i class="fab fa-instagram"></i>
-          </a>
-        </div>
-      </div>
     </div>
-    <hr>
-    <div class="row">
-      <div class="col-12 text-center">
-        <p>&copy; <?php echo date('Y'); ?> Unique Talent Solutions.
-          <?php echo $currentLang === 'es' ? 'Todos los derechos reservados.' : 'All rights reserved.'; ?></p>
-      </div>
-    </div>
+
   </div>
 </footer>
+<!-- Footer end -->

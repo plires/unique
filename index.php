@@ -319,7 +319,7 @@ include_once('includes/latest-news-data.php');
 	<!-- Contacto end -->
 
 	<!-- Footer -->
-	<?php include('includes/footer-esp.php'); ?>
+	<?php include('includes/footer.inc.php'); ?>
 
 	<script src="node_modules/jquery/dist/jquery.min.js"></script>
 	<script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
