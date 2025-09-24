@@ -58,7 +58,7 @@ $(function () {
       .stop()
       .animate(
         {
-          scrollTop: $($anchor.attr("href")).offset().top - 90,
+          scrollTop: $($anchor.attr("data-section")).offset().top - 90,
         },
         1500,
         "easeInOutExpo"

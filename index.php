@@ -4,6 +4,7 @@ session_start();
 
 // SEGUNDO: Definir idioma
 $_SESSION['lang'] = 'es';
+$current = 'home';
 
 include_once('includes/config.inc.php');
 include_once('includes/funciones_validar.php');

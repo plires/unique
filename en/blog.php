@@ -4,6 +4,7 @@ session_start();
 
 // SEGUNDO: Definir idioma
 $_SESSION['lang'] = 'en';
+$current = 'blog';
 
 include_once('../includes/config.inc.php');
 include_once('../includes/funciones_validar.php');
@@ -27,18 +28,19 @@ require_once("../clases/repositorioSQL.php");
   <link rel="stylesheet" href="../node_modules/@fortawesome/fontawesome-free/css/all.min.css">
   <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="../node_modules/wowjs/css/libs/animate.css">
-  <link rel="stylesheet" href="../css/app.css">
   <link rel="stylesheet" href="../css/latest-news.css">
   <link rel="stylesheet" href="../css/blog-pagination.css">
+  <link rel="stylesheet" href="../css/app.css">
   <?php include('../includes/tag_manager_head.php'); ?>
 </head>
 
 <body>
   <?php include('../includes/tag_manager_body.php'); ?>
 
+  <!-- Header -->
+  <?php include('../includes/header.inc.php'); ?>
+
   <div id="app">
-    <!-- Header -->
-    <?php include('../includes/header.inc.php'); ?>
 
     <!-- Main Content -->
     <main>
@@ -227,8 +229,8 @@ require_once("../clases/repositorioSQL.php");
   <script src="../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-
-  <!-- App JavaScript -->
+  <script src="node_modules/wowjs/dist/wow.min.js"></script>
+  <script src="../js/app.js"></script>
   <script src="../js/blog.js"></script>
 
   <?php include('../includes/tag_manager_body.php'); ?>

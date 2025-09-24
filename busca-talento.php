@@ -142,7 +142,7 @@ require_once("clases/repositorioSQL.php");
 	<!-- Busca Talento end -->
 
 	<!-- Contacto -->
-	<section id="contacto" class="contacto wow fadeInUp">
+	<section class="contacto wow fadeInUp">
 		<div class="container-fluid">
 			<div class="container">
 				<div class="row">
