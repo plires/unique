@@ -3,42 +3,42 @@
 session_start();
 
 // SEGUNDO: Definir idioma
-$_SESSION['lang'] = 'es';
+$_SESSION['lang'] = 'en';
 
-include_once('includes/config.inc.php');
-include_once('includes/funciones_validar.php');
-require_once("clases/app.php");
-require_once("clases/repositorioSQL.php");
+include_once('../includes/config.inc.php');
+include_once('../includes/funciones_validar.php');
+require_once("../clases/app.php");
+require_once("../clases/repositorioSQL.php");
 ?>
 
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Blog de Unique Talent Solutions - Últimas novedades y noticias de la industria del Turismo y Hotelería.">
+  <meta name="description" content="Unique Talent Solutions Blog - Latest trends and news from the Tourism and Hospitality industry.">
   <meta name="author" content="Librecomunicacion">
   <!-- Favicons -->
-  <?php include('includes/favicon.inc.php'); ?>
-  <title>Unique Talent Solutions - Últimas novedades</title>
+  <?php include('../includes/favicon.inc.php'); ?>
+  <title>Blog - Unique Talent Solutions</title>
 
-  <link rel="stylesheet" href="node_modules/normalize.css/normalize.css">
-  <link rel="stylesheet" href="node_modules/@fortawesome/fontawesome-free/css/all.min.css">
-  <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" href="node_modules/wowjs/css/libs/animate.css">
-  <link rel="stylesheet" href="css/app.css">
-  <link rel="stylesheet" href="css/latest-news.css">
-  <link rel="stylesheet" href="css/blog-pagination.css">
-  <?php include('includes/tag_manager_head.php'); ?>
+  <link rel="stylesheet" href="../node_modules/normalize.css/normalize.css">
+  <link rel="stylesheet" href="../node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+  <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="../node_modules/wowjs/css/libs/animate.css">
+  <link rel="stylesheet" href="../css/app.css">
+  <link rel="stylesheet" href="../css/latest-news.css">
+  <link rel="stylesheet" href="../css/blog-pagination.css">
+  <?php include('../includes/tag_manager_head.php'); ?>
 </head>
 
 <body>
-  <?php include('includes/tag_manager_body.php'); ?>
+  <?php include('../includes/tag_manager_body.php'); ?>
 
   <div id="app">
     <!-- Header -->
-    <?php include('includes/header.inc.php'); ?>
+    <?php include('../includes/header.inc.php'); ?>
 
     <!-- Main Content -->
     <main>
@@ -48,16 +48,16 @@ require_once("clases/repositorioSQL.php");
 
           <!-- Título de la sección -->
           <div class="latest-news-title">
-            <h1>Nuestro Blog</h1>
-            <p>Mantente al día con las últimas tendencias y noticias del sector turístico y hotelero</p>
+            <h1>Our Blog</h1>
+            <p>Stay up to date with the latest trends and news from the tourism and hospitality sector</p>
           </div>
 
           <!-- Loading State -->
           <div v-if="isLoading" class="blog-loading">
             <div class="spinner-border text-primary" role="status">
-              <span class="sr-only">Cargando posts...</span>
+              <span class="sr-only">Loading posts...</span>
             </div>
-            <p class="mt-3 text-muted">Cargando contenido...</p>
+            <p class="mt-3 text-muted">Loading content...</p>
           </div>
 
           <!-- Posts Grid -->
@@ -74,7 +74,7 @@ require_once("clases/repositorioSQL.php");
                       loading="lazy">
                     <div v-else class="news-card-image-placeholder">
                       <i class="fas fa-image" aria-hidden="true"></i>
-                      <span class="sr-only">Sin imagen</span>
+                      <span class="sr-only">No image</span>
                     </div>
 
                     <!-- Fecha -->
@@ -97,9 +97,9 @@ require_once("clases/repositorioSQL.php");
                     <div class="news-card-footer">
                       <a href="#"
                         class="news-card-btn"
-                        :aria-label="`Leer más sobre ${post.title}`"
+                        :aria-label="`Read more about ${post.title}`"
                         role="button">
-                        Leer más
+                        Read more
                         <i class="fas fa-arrow-right" aria-hidden="true"></i>
                       </a>
                     </div>
@@ -112,7 +112,7 @@ require_once("clases/repositorioSQL.php");
             <div class="blog-pagination" v-if="pagination.total_pages > 1">
               <div class="row">
                 <div class="col-12">
-                  <nav aria-label="Paginación del blog">
+                  <nav aria-label="Blog pagination">
                     <ul class="pagination justify-content-center">
                       <!-- Botón Anterior -->
                       <li class="page-item" :class="{ disabled: !pagination.has_prev }">
@@ -120,9 +120,9 @@ require_once("clases/repositorioSQL.php");
                           @click="changePage(pagination.current_page - 1)"
                           :disabled="!pagination.has_prev"
                           class="page-link"
-                          aria-label="Página anterior">
+                          aria-label="Previous page">
                           <i class="fas fa-chevron-left"></i>
-                          <span class="d-none d-md-inline ml-2">Anterior</span>
+                          <span class="d-none d-md-inline ml-2">Previous</span>
                         </button>
                       </li>
 
@@ -185,8 +185,8 @@ require_once("clases/repositorioSQL.php");
                           @click="changePage(pagination.current_page + 1)"
                           :disabled="!pagination.has_next"
                           class="page-link"
-                          aria-label="Página siguiente">
-                          <span class="d-none d-md-inline mr-2">Siguiente</span>
+                          aria-label="Next page">
+                          <span class="d-none d-md-inline mr-2">Next</span>
                           <i class="fas fa-chevron-right"></i>
                         </button>
                       </li>
@@ -199,7 +199,7 @@ require_once("clases/repositorioSQL.php");
             <!-- Info de paginación -->
             <div class="pagination-info" v-if="pagination.total > 0">
               <small class="text-muted">
-                Mostrando {{ pagination.showing_from }} a {{ pagination.showing_to }} de {{ pagination.total }} artículos
+                Showing {{ pagination.showing_from }} to {{ pagination.showing_to }} of {{ pagination.total }} articles
               </small>
             </div>
           </div>
@@ -209,8 +209,8 @@ require_once("clases/repositorioSQL.php");
             <div class="col-12">
               <div class="news-empty-state">
                 <i class="fas fa-newspaper" aria-hidden="true"></i>
-                <h3>No hay artículos disponibles</h3>
-                <p>Aún no se han publicado artículos en nuestro blog. ¡Vuelve pronto para ver las últimas novedades!</p>
+                <h3>No articles available</h3>
+                <p>No articles have been published on our blog yet. Come back soon to see the latest news!</p>
               </div>
             </div>
           </div>
@@ -219,19 +219,19 @@ require_once("clases/repositorioSQL.php");
     </main>
 
     <!-- Footer -->
-    <?php include('includes/footer.inc.php'); ?>
+    <?php include('../includes/footer.inc.php'); ?>
   </div>
 
   <!-- JavaScript -->
-  <script src="node_modules/jquery/dist/jquery.min.js"></script>
-  <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../node_modules/jquery/dist/jquery.min.js"></script>
+  <script src="../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
   <!-- App JavaScript -->
-  <script src="js/blog.js"></script>
+  <script src="../js/blog.js"></script>
 
-  <?php include('includes/tag_manager_body.php'); ?>
+  <?php include('../includes/tag_manager_body.php'); ?>
 </body>
 
 </html>

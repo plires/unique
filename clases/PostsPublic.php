@@ -16,6 +16,138 @@ class PostsPublic
   }
 
   /**
+   * Clase PostsPublic - Manejo de posts para el frontend público
+   * NOTA: Este código debe AGREGARSE a la clase existente, no reemplazarla
+   */
+
+  // AGREGAR ESTE MÉTODO A LA CLASE PostsPublic EXISTENTE:
+
+  /**
+   * Obtener posts paginados para el blog público
+   */
+  public function getPostsPaginated($page = 1, $perPage = 9, $language = 'es')
+  {
+    // Calcular offset
+    $offset = ($page - 1) * $perPage;
+
+    // Contar total de posts activos para el idioma
+    $countSql = "
+      SELECT COUNT(*) as total
+      FROM posts p
+      WHERE p.status = 1 
+      AND p.language = :language
+  ";
+
+    $totalResult = $this->db->fetch($countSql, ['language' => $language]);
+    $total = (int) $totalResult['total'];
+
+    // Obtener posts de la página actual
+    $sql = "
+      SELECT 
+          p.id,
+          p.title,
+          p.content,
+          p.youtube_url,
+          p.created_at,
+          p.updated_at,
+          i.filename as listing_image,
+          i.file_path as listing_image_path,
+          i.alt_text as listing_image_alt
+      FROM posts p
+      LEFT JOIN post_images i ON (
+          p.id = i.post_id 
+          AND i.type = 'listing' 
+          AND i.status = 1
+      )
+      WHERE p.status = 1
+      AND p.language = :language
+      ORDER BY p.created_at DESC
+      LIMIT :limit OFFSET :offset
+  ";
+
+    $posts = $this->db->fetchAll($sql, [
+      'language' => $language,
+      'limit' => $perPage,
+      'offset' => $offset
+    ]);
+
+    // Calcular metadatos de paginación
+    $totalPages = ceil($total / $perPage);
+
+    return [
+      'data' => $posts,
+      'pagination' => [
+        'current_page' => $page,
+        'total_pages' => $totalPages,
+        'total' => $total,
+        'per_page' => $perPage,
+        'has_prev' => $page > 1,
+        'has_next' => $page < $totalPages,
+        'showing_from' => $total > 0 ? $offset + 1 : 0,
+        'showing_to' => min($offset + $perPage, $total)
+      ]
+    ];
+  }
+
+  /**
+   * Obtener posts filtrados por idioma con límite (método auxiliar para compatibilidad)
+   */
+  public function getPostsByLanguage($language = 'es', $limit = null, $offset = 0)
+  {
+    $sql = "
+      SELECT 
+          p.id,
+          p.title,
+          p.content,
+          p.youtube_url,
+          p.created_at,
+          p.updated_at,
+          i.filename as listing_image,
+          i.file_path as listing_image_path,
+          i.alt_text as listing_image_alt
+      FROM posts p
+      LEFT JOIN post_images i ON (
+          p.id = i.post_id 
+          AND i.type = 'listing' 
+          AND i.status = 1
+      )
+      WHERE p.status = 1
+      AND p.language = :language
+      ORDER BY p.created_at DESC
+  ";
+
+    $params = ['language' => $language];
+
+    if ($limit) {
+      $sql .= " LIMIT :limit";
+      $params['limit'] = $limit;
+
+      if ($offset > 0) {
+        $sql .= " OFFSET :offset";
+        $params['offset'] = $offset;
+      }
+    }
+
+    return $this->db->fetchAll($sql, $params);
+  }
+
+  /**
+   * Contar posts activos por idioma
+   */
+  public function countPostsByLanguage($language = 'es')
+  {
+    $sql = "
+      SELECT COUNT(*) as total
+      FROM posts 
+      WHERE status = 1 
+      AND language = :language
+  ";
+
+    $result = $this->db->fetch($sql, ['language' => $language]);
+    return (int) $result['total'];
+  }
+
+  /**
    * Obtener los últimos N posts activos con su imagen de listado
    */
   public function getLatestPosts($limit = 3, $language = 'es')
