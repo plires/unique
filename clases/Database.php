@@ -214,7 +214,7 @@ class Database
     }
 
     // En producción, mostrar mensaje genérico
-    die('<div style="background:#d1ecf1;color:#0c5460;padding:20px;border:1px solid #bee5eb;border-radius:5px;margin:20px;"><strong>Error interno del sistema.</strong><br>Intente nuevamente más tarde.</div>');
+    die('<div style="background:#d1ecf1;color:#0c5460;padding:20px;border:1px solid #bee5eb;border-radius:5px;margin:20px;"><strong>Error interno del sistema.</strong><br>Intente nuevamente más tarde.' . $message . '</div>');
   }
 
   /**
