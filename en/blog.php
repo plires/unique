@@ -97,7 +97,7 @@ require_once("../clases/repositorioSQL.php");
 
                     <!-- Footer con botón -->
                     <div class="news-card-footer">
-                      <a href="#"
+                      <a :href="`post.php?id=${post.id}`"
                         class="news-card-btn"
                         :aria-label="`Read more about ${post.title}`"
                         role="button">

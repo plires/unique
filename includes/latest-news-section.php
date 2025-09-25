@@ -51,7 +51,7 @@ $texts = getLatestNewsTexts($currentLang);
 
                 <!-- Footer con botón -->
                 <div class="news-card-footer">
-                  <a href="<?php echo htmlspecialchars($post['view_url']); ?>"
+                  <a href="post.php?id=<?= $post['id'] ?>"
                     class="news-card-btn"
                     aria-label="<?php echo htmlspecialchars($post['read_more_aria']); ?>"
                     role="button">
