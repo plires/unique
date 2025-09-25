@@ -101,7 +101,7 @@ define('IMAGE_SIZES_BY_TYPE', json_encode([
     'quality' => 85
   ],
   'content' => [
-    'width' => 1280,
+    'width' => 1200,
     'height' => 800,
     'crop' => true,
     'quality' => 85

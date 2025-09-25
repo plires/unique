@@ -2,11 +2,12 @@
    POST INDIVIDUAL - ESTILOS ESPECÍFICOS
    ============================================== */
 
-/* Sección Hero */
+/* Sección Hero - OPTIMIZADA para 1920x750px */
 .post-hero {
   position: relative;
-  height: 60vh;
-  min-height: 400px;
+  height: 65vh; /* Aumentado de 60vh para aprovechar mejor el aspect ratio 1920x750 */
+  min-height: 450px; /* Aumentado de 400px */
+  max-height: 700px; /* Límite máximo para pantallas muy grandes */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -21,6 +22,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center center; /* Garantiza centrado óptimo */
   z-index: 1;
 }
 
@@ -229,7 +231,7 @@
   border-radius: 12px;
 }
 
-/* Galería de imágenes */
+/* Galería de imágenes - OPTIMIZADA para 1200x800px */
 .post-images {
   margin-bottom: 60px;
 }
@@ -244,8 +246,11 @@
 
 .post-images img {
   width: 100%;
-  height: 300px;
+  height: auto; /* Cambiado de height: 300px fijo a auto para mantener proporción */
+  min-height: 270px; /* Altura mínima para consistencia visual */
+  max-height: 380px; /* Altura máxima para evitar imágenes demasiado altas */
   object-fit: cover;
+  object-position: center center;
   border-radius: 15px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
@@ -255,6 +260,32 @@
 .post-images img:hover {
   transform: translateY(-8px) scale(1.02);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* Ajustes específicos por cantidad de columnas para 1200x800px (aspect ratio 3:2) */
+
+/* 1 imagen (12 columnas) - Aprovecha mejor el aspect ratio 3:2 */
+.post-images .row .col-12 img {
+  max-height: 480px; /* Altura que permite aprovechar el 3:2 en fullwidth */
+  height: auto;
+}
+
+/* 2 imágenes (6 columnas cada una) - Ratio 3:2 optimizado */
+.post-images .row .col-md-6 img {
+  height: 300px; /* Altura que funciona bien con el aspect ratio 3:2 */
+  max-height: 300px;
+}
+
+/* 3 imágenes (4 columnas cada una) - Más compactas */
+.post-images .row .col-md-4 img {
+  height: 270px; /* Altura menor para columnas más estrechas pero proporcional */
+  max-height: 270px;
+}
+
+/* Más de 3 imágenes (6 columnas cada una) - Balance perfecto */
+.post-images .row .col-md-6:nth-child(n + 4) img {
+  height: 290px; /* Altura intermedia para múltiples filas */
+  max-height: 290px;
 }
 
 /* Estilos específicos para imágenes clickeables */
@@ -297,7 +328,7 @@
 }
 
 #imageModal .modal-content {
-  background: rgba(0, 0, 0, 0.6) !important;
+  background: rgba(0, 0, 0, 0.8) !important;
   border: none !important;
   border-radius: 0 !important;
   width: 100%;
@@ -308,8 +339,8 @@
 
 #imageModal .modal-header {
   position: absolute;
-  top: 8%;
-  right: 8%;
+  top: 20px;
+  right: 20px;
   z-index: 1060;
   border: none !important;
   padding: 0;
@@ -318,7 +349,7 @@
 
 #imageModal .btn-close,
 #imageModal .close {
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   width: 50px;
   height: 50px;
@@ -334,7 +365,7 @@
 
 #imageModal .btn-close:hover,
 #imageModal .close:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.3);
   opacity: 1;
   transform: scale(1.1);
   color: white;
