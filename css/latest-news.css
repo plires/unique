@@ -198,9 +198,9 @@
 }
 
 .news-card-btn {
-  background: var(--primary-color);
-  color: white;
-  border: none;
+  border: solid 1px var(--primary-color);
+  border-radius: 3px;
+  color: var(--primary-color);
   padding: 12px 24px;
   font-weight: 600;
   text-decoration: none;
@@ -231,6 +231,7 @@
 
 .news-card-btn:hover {
   color: white;
+  background: var(--primary-color);
   text-decoration: none;
   box-shadow: 0 8px 20px rgba(36, 188, 181, 0.3);
 }
