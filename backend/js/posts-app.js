@@ -326,10 +326,10 @@ let postsApp = new Vue({
       this.modalTitle = "Crear Post";
       this.currentPost = {
         id: null,
-        title: "",
+        title: "", // Asegurar que sea string vacío
         content: "",
         youtube_url: "",
-        language: "es", // NUEVO: Valor por defecto español
+        language: "es",
         active: true,
       };
       this.formErrors = [];
@@ -349,19 +349,22 @@ let postsApp = new Vue({
 
       this.isEditing = true;
       this.modalTitle = "Editar Post";
+
+      // VALIDACIÓN ROBUSTA: Asegurar que todos los campos sean strings válidos
       this.currentPost = {
         id: postData.id,
-        title: postData.title,
-        content: postData.content,
-        youtube_url: postData.youtube_url || "",
-        language: postData.language || "es", // NUEVO: Campo idioma con fallback
+        title: String(postData.title || ""), // Convertir a string y manejar null/undefined
+        content: String(postData.content || ""),
+        youtube_url: String(postData.youtube_url || ""),
+        language: postData.language || "es", // Fallback a español
         active: postData.status == 1,
       };
+
       this.formErrors = [];
 
       // Cargar contenido en el editor
       if (this.quillEditor) {
-        this.quillEditor.root.innerHTML = postData.content;
+        this.quillEditor.root.innerHTML = this.currentPost.content;
       }
 
       // Validar URL de YouTube si existe
@@ -378,8 +381,12 @@ let postsApp = new Vue({
         ? this.quillEditor.root.innerHTML
         : this.currentPost.content;
 
-      // NUEVO: Validar campos requeridos incluyendo idioma
-      if (!this.currentPost.title.trim()) {
+      // VALIDACIÓN MEJORADA: Verificar que currentPost.title sea string válido
+      if (
+        !this.currentPost.title ||
+        typeof this.currentPost.title !== "string" ||
+        !this.currentPost.title.trim()
+      ) {
         this.formErrors = ["El título es obligatorio"];
         return;
       }
@@ -389,12 +396,15 @@ let postsApp = new Vue({
         return;
       }
 
-      // Preparar datos del formulario
+      // Preparar datos del formulario con strings seguros
       const formData = new FormData();
-      formData.append("title", this.currentPost.title);
-      formData.append("content", content);
-      formData.append("youtube_url", this.currentPost.youtube_url || "");
-      formData.append("language", this.currentPost.language); // NUEVO: Campo idioma
+      formData.append("title", String(this.currentPost.title).trim());
+      formData.append("content", String(content));
+      formData.append(
+        "youtube_url",
+        String(this.currentPost.youtube_url || "")
+      );
+      formData.append("language", String(this.currentPost.language));
       formData.append("status", this.currentPost.active ? 1 : 0);
 
       if (this.isEditing) {

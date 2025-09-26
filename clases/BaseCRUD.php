@@ -193,7 +193,9 @@ class BaseCRUD
 
     $filtered = [];
     foreach ($this->fillable as $field) {
-      if (isset($data[$field])) {
+      // Usar array_key_exists en lugar de isset
+      // para permitir valores null explícitos
+      if (array_key_exists($field, $data)) {
         $filtered[$field] = $data[$field];
       }
     }
