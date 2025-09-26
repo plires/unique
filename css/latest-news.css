@@ -5,7 +5,6 @@
 
 .latest-news {
   padding: 80px 0;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   position: relative;
   overflow: hidden;
 }
@@ -31,6 +30,7 @@
   margin-bottom: 60px;
 }
 
+.latest-news-title h1,
 .latest-news-title h2 {
   font-size: 2.5rem;
   font-weight: 700;
@@ -40,6 +40,7 @@
   display: inline-block;
 }
 
+.latest-news-title h1::after,
 .latest-news-title h2::after {
   content: "";
   position: absolute;
@@ -48,7 +49,7 @@
   transform: translateX(-50%);
   width: 80px;
   height: 4px;
-  background: linear-gradient(45deg, #007bff, #28a745);
+  background: #24bcb5;
   border-radius: 2px;
 }
 
@@ -302,7 +303,7 @@
 }
 
 .news-card-title-link:hover {
-  color: #007bff;
+  color: #24bcb5;
   text-decoration: none;
 }
 
