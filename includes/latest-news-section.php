@@ -27,7 +27,9 @@ $texts = getLatestNewsTexts($currentLang);
             <article class="news-card" role="article">
               <!-- Imagen del post -->
               <div class="news-card-image">
-                <?php echo renderPostImage($post, $currentLang); ?>
+                <a href="post.php?id=<?= $post['id'] ?>">
+                  <?php echo renderPostImage($post, $currentLang); ?>
+                </a>
 
                 <!-- Fecha -->
                 <div class="news-card-date">
