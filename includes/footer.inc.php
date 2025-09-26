@@ -68,7 +68,7 @@ $urls = [
 <footer class="footer_content">
   <div class="container">
     <div class="row">
-      <div class="col-lg-4 col-md-6 mb-4">
+      <div class="col-lg-3 col-md-6 mb-4 content_column logo">
         <div class="footer-logo mb-3">
           <img src="<?php echo $logoPath; ?>" alt="Unique Talent Solutions">
         </div>
@@ -77,7 +77,7 @@ $urls = [
         </p>
       </div>
 
-      <div class="col-lg-2 col-md-6 mb-4">
+      <div class="col-lg-3 col-md-6 mb-4 content_column links">
         <h5 class="footer-title"><?php echo $texts['links']; ?></h5>
         <ul class="footer-links">
           <li><a href="<?php echo $urls['home']; ?>"><?php echo $texts['home']; ?></a></li>
@@ -100,7 +100,7 @@ $urls = [
         </ul>
       </div>
 
-      <div class="col-lg-3 col-md-6 mb-4">
+      <div class="col-lg-3 col-md-6 mb-4 content_column services">
         <h5 class="footer-title"><?php echo $texts['servicesTitle']; ?></h5>
         <ul class="footer-links">
           <li><a href="<?php echo $urls['jobs']; ?>" target="_blank" rel="noopener noreferrer"><?php echo $texts['jobs']; ?></a></li>
@@ -108,7 +108,7 @@ $urls = [
         </ul>
       </div>
 
-      <div class="col-lg-3 col-md-6 mb-4 text-right">
+      <div class="col-lg-3 col-md-6 mb-4 content_column rrss">
         <h5 class="footer-title"><?php echo $texts['followUs']; ?></h5>
         <ul>
           <li class="mt-2"><a class="transition btn_nav" target="_blank" href="https://api.whatsapp.com/send?phone=+5491157550306&text=Hola!%20Necesito%20hacer%20una%20consulta!">+54 9 115 755 0306 <i class="fab fa-whatsapp-square ml-2"></i></a>

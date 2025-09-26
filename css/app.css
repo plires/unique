@@ -602,6 +602,20 @@ footer a:hover {
 footer .fab {
   font-size: 1.25rem;
 }
+
+footer .content_column {
+  text-align: center;
+}
+
+footer .content_column.logo,
+footer .content_column.services {
+  text-align: left;
+}
+
+footer .content_column.links,
+footer .content_column.rrss {
+  text-align: right;
+}
 /* Footer end */
 
 /* MEDIA QUERIS */
@@ -947,6 +961,16 @@ footer .fab {
     width: 70px;
   }
   /* Busca Talento end */
+
+  /* Footer */
+  footer .content_column.links {
+    text-align: center;
+  }
+
+  footer .content_column.services {
+    text-align: center;
+  }
+  /* Footer end */
 }
 
 @media (min-width: 1200px) {
