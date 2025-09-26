@@ -258,7 +258,7 @@
 }
 
 .post-images img:hover {
-  transform: translateY(-8px) scale(1.02);
+  transform: scale(1.02);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 }
 
@@ -313,11 +313,6 @@
   opacity: 1;
 }
 
-.post-content-image:focus {
-  outline: 3px solid #007bff;
-  outline-offset: 3px;
-}
-
 /* Modal de imágenes */
 #imageModal .modal-dialog {
   max-width: 100vw;
@@ -339,8 +334,8 @@
 
 #imageModal .modal-header {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: 5%;
+  right: 5%;
   z-index: 1060;
   border: none !important;
   padding: 0;
@@ -479,7 +474,6 @@
   text-align: center;
   margin-top: 60px;
   padding: 40px 0;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border-radius: 20px;
 }
 
@@ -488,14 +482,13 @@
   align-items: center;
   gap: 12px;
   padding: 15px 30px;
-  background: linear-gradient(45deg, #007bff, #0056b3);
+  background: var(--primary-color);
   color: white;
   text-decoration: none;
-  border-radius: 30px;
   font-weight: 600;
   font-size: 1rem;
   transition: all 0.3s ease;
-  box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+  box-shadow: 0 5px 15px rgba(36, 188, 181, 0.3);
   position: relative;
   overflow: hidden;
 }
@@ -519,8 +512,7 @@
 .btn-back-to-blog:hover {
   color: white;
   text-decoration: none;
-  transform: translateY(-3px);
-  box-shadow: 0 15px 30px rgba(0, 123, 255, 0.4);
+  box-shadow: 0 15px 30px rgba(36, 188, 181, 0.4);
 }
 
 .btn-back-to-blog:hover::before {
@@ -538,7 +530,7 @@
 
 /* Metadatos del post */
 .post-meta {
-  background: rgba(0, 123, 255, 0.05);
+  background: rgba(36, 188, 181, 0.05);
   border-radius: 15px;
   padding: 20px;
   margin-bottom: 30px;
@@ -723,6 +715,6 @@
   }
 
   .post-meta {
-    background: rgba(0, 123, 255, 0.1);
+    background: rgba(36, 188, 181, 0.1);
   }
 }
