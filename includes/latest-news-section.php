@@ -10,16 +10,16 @@ $currentLang = isset($_SESSION['lang']) ? $_SESSION['lang'] : 'es';
 $texts = getLatestNewsTexts($currentLang);
 ?>
 
-<!-- Últimas Novedades -->
-<section class="latest-news" id="latest-news">
-  <div class="container">
-    <!-- Título de la sección -->
-    <div class="latest-news-title">
-      <h2><?php echo htmlspecialchars($texts['title']); ?></h2>
-      <p><?php echo htmlspecialchars($texts['subtitle']); ?></p>
-    </div>
+<?php if ($hasLatestPosts): ?>
+  <!-- Últimas Novedades -->
+  <section class="latest-news" id="latest-news">
+    <div class="container">
+      <!-- Título de la sección -->
+      <div class="latest-news-title">
+        <h2><?php echo htmlspecialchars($texts['title']); ?></h2>
+        <p><?php echo htmlspecialchars($texts['subtitle']); ?></p>
+      </div>
 
-    <?php if ($hasLatestPosts): ?>
       <!-- Grid de posts -->
       <div class="row">
         <?php foreach ($latestPosts as $index => $post): ?>
@@ -27,9 +27,7 @@ $texts = getLatestNewsTexts($currentLang);
             <article class="news-card" role="article">
               <!-- Imagen del post -->
               <div class="news-card-image">
-                <a href="post.php?id=<?= $post['id'] ?>">
-                  <?php echo renderPostImage($post, $currentLang); ?>
-                </a>
+                <?php echo renderPostImage($post, $currentLang); ?>
 
                 <!-- Fecha -->
                 <div class="news-card-date">
@@ -67,17 +65,6 @@ $texts = getLatestNewsTexts($currentLang);
         <?php endforeach; ?>
       </div>
 
-    <?php else: ?>
-      <!-- Estado vacío -->
-      <div class="row">
-        <div class="col-12">
-          <div class="news-empty-state">
-            <i class="fas fa-newspaper" aria-hidden="true"></i>
-            <h3><?php echo htmlspecialchars($texts['empty_title']); ?></h3>
-            <p><?php echo htmlspecialchars($texts['empty_description']); ?></p>
-          </div>
-        </div>
-      </div>
-    <?php endif; ?>
-  </div>
-</section>
+    </div>
+  </section>
+<?php endif; ?>
