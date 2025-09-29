@@ -276,16 +276,10 @@
   max-height: 300px;
 }
 
-/* 3 imágenes (4 columnas cada una) - Más compactas */
+/* 3 imágenes o mas (4 columnas cada una) - Más compactas */
 .post-images .row .col-md-4 img {
   height: 270px; /* Altura menor para columnas más estrechas pero proporcional */
   max-height: 270px;
-}
-
-/* Más de 3 imágenes (6 columnas cada una) - Balance perfecto */
-.post-images .row .col-md-6:nth-child(n + 4) img {
-  height: 290px; /* Altura intermedia para múltiples filas */
-  max-height: 290px;
 }
 
 /* Estilos específicos para imágenes clickeables */
