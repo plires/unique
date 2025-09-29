@@ -14,7 +14,7 @@ if ($userBdd['user'] === $user && $userBdd['pass'] === md5($pass)) {
 	session_start();
 	$_SESSION['id'] = (int)$user;
 	$_SESSION['user'] = $pass;
-	header('Location: jobs.php');
+	header('Location: posts.php');
 } else {
 	$errors['match'] = 'usuario o Contraseña incorrecta.';
 }
