@@ -70,15 +70,17 @@ require_once("../clases/repositorioSQL.php");
                 <article class="news-card" role="article">
                   <!-- Imagen del post -->
                   <div class="news-card-image">
-                    <a :href="`post.php?id=${post.id}`">
-                      <img v-if="post.image_url"
+                    <a v-if="post.image_url" :href="`post.php?id=${post.id}`">
+                      <img
                         :src="post.image_url"
                         :alt="post.listing_image_alt || post.title"
                         loading="lazy">
                     </a>
                     <div v-else class="news-card-image-placeholder">
-                      <i class="fas fa-image" aria-hidden="true"></i>
-                      <span class="sr-only">No image</span>
+                      <a :href="`post.php?id=${post.id}`">
+                        <i class="fas fa-image" aria-hidden="true"></i>
+                        <span class="sr-only">No image</span>
+                      </a>
                     </div>
 
                     <!-- Fecha -->

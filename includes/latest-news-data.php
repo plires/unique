@@ -67,16 +67,18 @@ function renderPostImage($post, $lang = 'es')
       ? htmlspecialchars($post['listing_image_alt'])
       : htmlspecialchars($post['title']);
 
-    return '<img src="' . htmlspecialchars($post['image_url']) . '" 
-                     alt="' . $alt . '" 
-                     loading="lazy">';
+    return "<a href=\"post.php?id={$post['id']}\"><img src=\"" . htmlspecialchars($post['image_url']) . "\" 
+      alt=\"$alt\" 
+      loading=\"lazy\"></a>";
   } else {
     // Placeholder cuando no hay imagen
     $placeholderText = $lang === 'es' ? 'Sin imagen' : 'No image';
-    return '<div class="news-card-image-placeholder">
-                    <i class="fas fa-image" aria-hidden="true"></i>
-                    <span class="sr-only">' . $placeholderText . '</span>
-                </div>';
+    return "<div class=\"news-card-image-placeholder\">
+              <a href=\"post.php?id={$post['id']}\">
+                <i class=\"fas fa-image\" aria-hidden=\"true\"></i>
+                <span class=\"sr-only\">$placeholderText</span>
+                </a>
+            </div>";
   }
 }
 
