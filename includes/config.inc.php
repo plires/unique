@@ -66,7 +66,7 @@ define('DB_PASS', env('DB_PASS', 'secret'));
 define('DB_CHARSET', env('DB_CHARSET', 'utf8mb4'));
 
 // DSN para PDO
-define('DSN', 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET);
+define('DSN', 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET . ';port=3306');
 
 // === CONFIGURACIÓN DE URLs ===
 define('APP_URL_FRONTEND', env('APP_URL_FRONTEND', 'http://unique.test'));
