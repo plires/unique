@@ -55,6 +55,9 @@ function env($key, $default = null)
   return $_ENV[$key] ?? getenv($key) ?: $default;
 }
 
+// === CONFIGURACIÓN ENVIROMENT
+define('ENVIRONMENT', env('ENVIRONMENT', 'dev'));
+
 // === CONFIGURACIÓN DE BASE DE DATOS ===
 define('DB_HOST', env('DB_HOST', 'localhost'));
 define('DB_NAME', env('DB_NAME', 'lc_unique'));
@@ -75,6 +78,11 @@ define('EMAIL_RECIPIENT', env('EMAIL_RECIPIENT', 'info@unique.com'));
 define('EMAIL_BCC', env('EMAIL_BCC', 'admin@unique.com'));
 define('EMAIL_SENDER_SHOW', env('EMAIL_SENDER_SHOW', 'noreply@unique.com'));
 define('NAME_SENDER_SHOW', env('NAME_SENDER_SHOW', 'Unique Talent Solutions'));
+define('SMTP', env('SMTP', '0.0.0.0'));
+define('EMAIL_CLIENT', env('EMAIL_CLIENT', 'testuser'));
+define('PASSWORD', env('PASSWORD', 'testpwd'));
+define('EMAIL_PORT', env('EMAIL_PORT', '1025'));
+define('EMAIL_CHARSET', env('EMAIL_CHARSET', 'utf8'));
 
 // === CONFIGURACIÓN DE ARCHIVOS ===
 define('UPLOAD_PATH', env('UPLOAD_PATH', 'uploads/cv/'));
@@ -89,27 +97,26 @@ define('ALLOWED_IMAGE_TYPES', env('ALLOWED_IMAGE_TYPES', 'jpg,jpeg,png,gif,webp'
 // Configuración para tipos específicos de imágenes
 define('IMAGE_SIZES_BY_TYPE', json_encode([
   'listing' => [
-    'width' => 600,
-    'height' => 600,
-    'crop' => true,
-    'quality' => 85
+    'width' => (int)env('IMAGE_SIZE_WIDTH_LISTING', 600),
+    'height' => (int)env('IMAGE_SIZE_HEIGHT_LISTING', 600),
+    'crop' => (bool)env('IMAGE_CROP', true),
+    'quality' => (int)env('IMAGE_QUALITY', 85)
   ],
   'header' => [
-    'width' => 1920,
-    'height' => 750,
-    'crop' => true,
-    'quality' => 85
+    'width' => (int)env('IMAGE_SIZE_WIDTH_HEADER', 1920),
+    'height' => (int)env('IMAGE_SIZE_HEIGHT_HEADER', 750),
+    'crop' => (bool)env('IMAGE_CROP', true),
+    'quality' => (int)env('IMAGE_QUALITY', 85)
   ],
   'content' => [
-    'width' => 1200,
-    'height' => 800,
-    'crop' => true,
-    'quality' => 85
+    'width' => (int)env('IMAGE_SIZE_WIDTH_CONTENT', 1200),
+    'height' => (int)env('IMAGE_SIZE_HEIGHT_CONTENT', 800),
+    'crop' => (bool)env('IMAGE_CROP', true),
+    'quality' => (int)env('IMAGE_QUALITY', 85)
   ]
 ]));
 
 // Configuración general de imágenes 
-define('IMAGE_SIZES', env('IMAGE_SIZES', 'thumbnail:300x300,medium:800x600,large:1200x800'));
 define('IMAGE_QUALITY_JPG', env('IMAGE_QUALITY_JPG', 85));
 define('IMAGE_QUALITY_PNG', env('IMAGE_QUALITY_PNG', 90));
 define('IMAGE_QUALITY_WEBP', env('IMAGE_QUALITY_WEBP', 80));

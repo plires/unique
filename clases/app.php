@@ -95,33 +95,38 @@ class App
       // $mail->SMTPDebug = SMTP::DEBUG_SERVER;
       // $mail->SMTPDebug = 2; //Alternative to above constant
 
-      $mail->isSMTP();                                    // Send using SMTP
-      $mail->Host       = 'localhost';                    // Esto tiene que estar asi por GoDaddy
-      $mail->SMTPAuth   = false;                          // Esto tiene que estar asi por GoDaddy
-      $mail->SMTPAutoTLS = false;                         // Esto tiene que estar asi por GoDaddy
-      // $mail->Username   = EMAIL_SENDER;                  // SMTP username
-      // $mail->Password = EMAIL_PASS;                               // SMTP password
-      // $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;         // Enable TLS encryption; `PHPMailer::ENCRYPTION_SMTPS` encouraged
-      $mail->Port       = EMAIL_PORT;                                    // TCP port to connect to, use 465 for `PHPMailer::ENCRYPTION_SMTPS` above
-      $mail->SMTPOptions = array(
-        'ssl' => array(
-          'verify_peer' => false,
-          'verify_peer_name' => false,
-          'allow_self_signed' => true
-        )
-      );
+      if (ENVIRONMENT === 'dev') {
+        $mail->isSendmail();
+      } else {
+        $mail->isSMTP();
+      }
+      // Send using SMTP
+      $mail->Host       = SMTP;
+      $mail->SMTPAuth   = true;
+      $mail->Username   = EMAIL_CLIENT;
+      $mail->Password   = PASSWORD;
+      $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+      $mail->Port       = EMAIL_PORT;
+
+      if (ENVIRONMENT === 'dev') {
+        $mail->SMTPOptions = array(
+          'ssl' => array(
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+            'allow_self_signed' => true
+          )
+        );
+      }
 
       // Recipientes
       $mail->setFrom($emailShow, $nameShow);
-      $mail->AddAddress($emailDestino); // Esta es la dirección a donde enviamos los datos del formulario
-      $mail->AddReplyTo($emailAddReplyTo); // Esto es para que al recibir el correo y poner Responder, lo haga a la cuenta del visitante. 
+      $mail->AddAddress($emailDestino);
+      $mail->AddReplyTo($emailAddReplyTo);
 
       // Content
-      $mail->isHTML(true);                                  // Set email format to HTML
-      $mail->Subject = $subject; // Este es el asunto del email.
-      // $mensajeHtml = nl2br($body);
-      $mail->Body = $body; // Texto del email en formato HTML
-      // FIN - VALORES A MODIFICAR //
+      $mail->isHTML(true);
+      $mail->Subject = $subject;
+      $mail->Body = $body;
 
       if ($emailBCC != '') { // si no esta vacio el campo BCC
         $mail->addBCC($emailBCC, $subject); // Copia del email
