@@ -1,5 +1,62 @@
-// === APLICACIÓN VUE PARA GESTIÓN DE POSTS ===
+// === CONFIGURACIÓN GLOBAL ===
+const APP_CONFIG = {
+  // Esta URL será reemplazada dinámicamente por PHP
+  API_BASE_URL: window.API_BASE_URL || "http://unique.test/backend/",
+};
 
+// === UTILIDADES ===
+const Utils = {
+  // Mostrar mensaje de éxito
+  showSuccess(message) {
+    if (typeof msgSuccess === "function") {
+      msgSuccess(message);
+    } else {
+      alert(message);
+    }
+  },
+
+  // Mostrar mensaje de error
+  showError(message) {
+    alert(message);
+  },
+
+  // Mostrar/ocultar loader
+  toggleLoader(show = true) {
+    if (show && typeof loader === "function") {
+      loader();
+    } else {
+      $("#loader").fadeOut(500);
+    }
+  },
+
+  // Hacer petición AJAX con manejo de errores estandarizado
+  async makeRequest(url, options = {}) {
+    const defaultOptions = {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    };
+
+    const config = { ...defaultOptions, ...options };
+
+    try {
+      const response = await axios(url, config);
+      return response.data;
+    } catch (error) {
+      console.error("Error en petición:", error);
+
+      if (error.response && error.response.data) {
+        const errorData = error.response.data;
+        throw new Error(errorData.message || "Error en el servidor");
+      } else {
+        throw new Error("Error de conexión");
+      }
+    }
+  },
+};
+
+// === APLICACIÓN VUE PARA GESTIÓN DE POSTS ===
 let postsApp = new Vue({
   el: "#app",
   data: {
@@ -189,32 +246,85 @@ let postsApp = new Vue({
       return null;
     },
 
-    // === USUARIO ===
+    // === GESTIÓN DE USUARIO ===
     async getUser() {
       try {
-        const response = await axios.get(
-          window.APP_CONFIG.API_BASE_URL + "php/getUser.php"
+        Utils.toggleLoader(true);
+        const userData = await Utils.makeRequest(
+          APP_CONFIG.API_BASE_URL + "php/getUser.php"
         );
-        this.user = response.data;
+        this.user = userData;
       } catch (error) {
         console.error("Error al cargar usuario:", error);
+      } finally {
+        Utils.toggleLoader(false);
       }
-    },
-
-    submitFormUser(e) {
-      e.preventDefault();
-      console.log("Actualizar usuario:", this.user);
     },
 
     checkFormUser() {
       this.errorsUser = [];
+
       if (!this.user.user) {
         this.errorsUser.push("El nombre de usuario es obligatorio.");
       }
       if (!this.user.email) {
-        this.errorsUser.push("El email es obligatorio.");
+        this.errorsUser.push("El email de contacto obligatorio.");
       }
+
+      if (this.changePass) {
+        let pass = $("#pass").val();
+        let cpass = $("#cpass").val();
+
+        if (!pass || !cpass) {
+          this.errorsUser.push("Ingresa la contraseña.");
+        }
+
+        if (pass != cpass) {
+          this.errorsUser.push("Las contraseñas no coinciden.");
+        }
+
+        if (pass.length < 6 || cpass.length < 6) {
+          this.errorsUser.push(
+            "Las contraseñas deben tener al menos 6 caracteres."
+          );
+        }
+      }
+
       return this.errorsUser.length === 0;
+    },
+
+    // Alias para compatibilidad
+    checkForm() {
+      return this.checkFormUser();
+    },
+
+    submitFormUser(e) {
+      e.preventDefault();
+
+      if (!this.checkFormUser()) {
+        return;
+      }
+
+      const data = $("#formUser").serialize();
+
+      Utils.toggleLoader(true);
+      $.ajax({
+        type: "POST",
+        url: APP_CONFIG.API_BASE_URL + "php/editUser.php",
+        data: data,
+        success: (response) => {
+          if (response) {
+            Utils.toggleLoader(false);
+            $("#modalFormUser").modal("hide");
+            Utils.showSuccess("El usuario se editó exitosamente.");
+            this.getUser();
+          }
+        },
+        error: () => {
+          Utils.toggleLoader(false);
+          Utils.showError("Hubo un error, intente nuevamente.");
+        },
+      });
     },
 
     rememberPassword() {
