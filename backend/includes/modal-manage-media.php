@@ -54,7 +54,7 @@
           <!-- Imagen de Listado -->
           <div class="mb-4">
             <h6 class="text-primary">
-              <i class="fas fa-th-large"></i> Imagen de Listado (máximo 1)
+              <i class="fas fa-th-large"></i> Imagen de Listado <br />(máximo 1 - 600px x 600px)
               <small class="text-muted">- Para mostrar en el listado de noticias</small>
             </h6>
             <div class="row">
@@ -81,7 +81,7 @@
           <!-- Imagen de Header -->
           <div class="mb-4">
             <h6 class="text-success">
-              <i class="fas fa-window-maximize"></i> Imagen de Header (máximo 1)
+              <i class="fas fa-window-maximize"></i> Imagen de Header <br />(máximo 1 - 1920px x 750px)
               <small class="text-muted">- Imagen principal de la noticia</small>
             </h6>
             <div class="row">
@@ -108,7 +108,7 @@
           <!-- Imágenes de Contenido -->
           <div class="mb-4">
             <h6 class="text-info">
-              <i class="fas fa-images"></i> Imágenes de Contenido (múltiples)
+              <i class="fas fa-images"></i> Imágenes de Contenido <br />(múltiples - 1200px x 800px)
               <small class="text-muted">- Para usar dentro del texto de la noticia</small>
             </h6>
             <div class="row">
