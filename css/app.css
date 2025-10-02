@@ -120,8 +120,7 @@ select::-ms-expand {
 header {
   padding: 15px 0;
   display: flex;
-  z-index: 100;
-  z-index: 2147483648;
+  z-index: 1040;
 }
 header .menu_bar {
   display: flex;
@@ -212,9 +211,8 @@ header .content_navegacion .languages_rrss i {
   position: fixed;
   background: var(--color-back);
   padding: 5px 15px;
-  z-index: 100;
+  z-index: 1040;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  z-index: 1000;
 }
 .header_scroll .content_navegacion {
   top: 70px !important;
