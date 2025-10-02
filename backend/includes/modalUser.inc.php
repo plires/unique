@@ -29,9 +29,15 @@
 	            </div>
 
 	            <div class="form-group form-check">
-						    <input type="checkbox" class="form-check-input" id="pasCheck">
-						    <label class="form-check-label" for="pasCheck" @click="rememberPassword">Cambiar mi contraseña actual</label>
-						  </div>
+								<input
+									type="checkbox"
+									class="form-check-input"
+									id="pasCheck"
+									@change="rememberPassword">
+								<label class="form-check-label" for="pasCheck">
+									Cambiar mi contraseña actual
+								</label>
+							</div>
 
 	            <div class="col-md-12" v-if="changePass">
 
