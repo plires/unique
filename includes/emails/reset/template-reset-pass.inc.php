@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 //preparamos el mensaje de confirmacion que le enviaremos al remitente.
 $body = '
@@ -33,7 +33,7 @@ $body = '
             </h2>
 
             <h3>
-                <strong>Nueva contraseña: </strong> '.$passNew.'
+                <strong>Nueva contraseña: </strong> ' . $_POST['pass'] . '
             </h3>
 
           </td>
@@ -48,5 +48,3 @@ $body = '
 </body>
 </html>
 ';
-
-?>

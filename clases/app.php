@@ -28,6 +28,13 @@ class App
           $emailAddReplyTo = $post['email'];
         }
         $emailShow = EMAIL_SENDER;  // Mi cuenta de correo
+
+        if (isset($_POST['pass'])) {
+          $emailDestino = $post['email'];
+          $emailBCC = null;
+          $nameShow = NAME_SENDER_SHOW;
+          $emailAddReplyTo = EMAIL_SENDER_SHOW;
+        }
         break;
 
       case 'Usuario':
@@ -39,10 +46,14 @@ class App
         break;
     }
 
-    if ($_SESSION['lang'] === 'es') {
-      $path = '';
-    } else {
-      $path = '../';
+    $path = '';
+
+    if (isset($_SESSION['lang'])) {
+
+      $lang = $_SESSION['lang'];
+      if ($lang !== 'es') {
+        $path = '../';
+      }
     }
 
     switch ($template) {
@@ -66,6 +77,11 @@ class App
       case 'Talento Usuario':
         include($path . 'includes/emails/talent/template-envio-usuario.inc.php'); // Cargo el contenido del email a enviar al usuario.
         $subject = 'Gracias por tu contacto.';
+        break;
+
+      case 'Reset Pass Cliente':
+        include($path . './../includes/emails/reset/template-reset-pass.inc.php');
+        $subject = 'Reseteo de contraseña - Sitio Unique.';
         break;
 
       case 'Consulta Cliente':
