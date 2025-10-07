@@ -729,10 +729,32 @@ let postsApp = new Vue({
         this.newImage.alt_text = "";
       } catch (error) {
         console.error("Error en uploadImage:", error);
-        this.showError(
-          "Error al subir imagen: " +
-            (error.response?.data?.message || error.message)
-        );
+
+        // 🔧 CORRECCIÓN: Mostrar errores específicos si existen
+        let errorMessage = "Error al subir imagen";
+
+        if (error.response?.data) {
+          const errorData = error.response.data;
+
+          // Si hay errores específicos en el array, mostrarlos
+          if (
+            errorData.errors &&
+            Array.isArray(errorData.errors) &&
+            errorData.errors.length > 0
+          ) {
+            errorMessage = errorData.errors.join(". ");
+          }
+          // Si no, usar el mensaje general
+          else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        }
+        // Si no hay respuesta del servidor, usar el mensaje de error general
+        else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        this.showError(errorMessage);
       } finally {
         this.hideLoader();
       }
@@ -766,10 +788,26 @@ let postsApp = new Vue({
 
         await this.refreshPostCounts(this.currentMediaPost.id);
       } catch (error) {
-        this.showError(
-          "Error al eliminar imagen: " +
-            (error.response?.data?.message || error.message)
-        );
+        // 🔧 CORRECCIÓN: Mismo manejo de errores mejorado
+        let errorMessage = "Error al eliminar imagen";
+
+        if (error.response?.data) {
+          const errorData = error.response.data;
+
+          if (
+            errorData.errors &&
+            Array.isArray(errorData.errors) &&
+            errorData.errors.length > 0
+          ) {
+            errorMessage = errorData.errors.join(". ");
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        this.showError(errorMessage);
       } finally {
         this.hideLoader();
       }
