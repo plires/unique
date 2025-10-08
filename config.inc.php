@@ -19,8 +19,6 @@ define('DB_PASS', 'Perezzs$7478');
 //////////////////////////////
 define('SMTP', 'smtp.gmail.com'); // nuevo Valor para gmail
 define('EMAIL_SENDER', 'info@unqtalent.com');
-define('EMAIL_SENDER_SHOW', 'info@unqtalent.com');
-define('NAME_SENDER_SHOW', 'Unique - Talent Solutions');
 
 define('EMAIL_RECIPIENT', 'info@unqtalent.com');
 define('EMAIL_BCC', '');

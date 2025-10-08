@@ -18,7 +18,6 @@ class App
     switch ($destinatario) {
       case 'Cliente':
         $emailDestino = EMAIL_RECIPIENT;
-        $emailBCC = EMAIL_BCC;
 
         if (isset($post['name'])) {
           $nameShow = $post['name'];
@@ -27,22 +26,20 @@ class App
           $nameShow = $post['email'];
           $emailAddReplyTo = $post['email'];
         }
-        $emailShow = EMAIL_SENDER;  // Mi cuenta de correo
+        $emailShow = EMAIL_SENDER;
 
         if (isset($_POST['pass'])) {
           $emailDestino = $post['email'];
-          $emailBCC = null;
           $nameShow = NAME_SENDER_SHOW;
-          $emailAddReplyTo = EMAIL_SENDER_SHOW;
+          $emailAddReplyTo = EMAIL_RECIPIENT;
         }
         break;
 
       case 'Usuario':
         $emailDestino = $post['email'];
         $nameShow = NAME_SENDER_SHOW;
-        $emailShow = EMAIL_RECIPIENT;  // Mi cuenta de correo
-        $emailAddReplyTo = EMAIL_SENDER_SHOW;
-        $emailBCC = '';
+        $emailShow = EMAIL_RECIPIENT;
+        $emailAddReplyTo = EMAIL_RECIPIENT;
         break;
     }
 
@@ -144,12 +141,9 @@ class App
       $mail->Subject = $subject;
       $mail->Body = $body;
 
-      if ($emailBCC != '') { // si no esta vacio el campo BCC
-        $mail->addBCC($emailBCC, $subject); // Copia del email
-      }
       $mail->AltBody = 'Consulta recibida';
       $mail->CharSet = EMAIL_CHARSET;
-
+      
       $send = $mail->send();
       // echo 'Mensaje enviado';
 

@@ -69,14 +69,13 @@ define('DB_CHARSET', env('DB_CHARSET', 'utf8mb4'));
 define('DSN', 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET . ';port=3306');
 
 // === CONFIGURACIÓN DE URLs ===
-define('APP_URL_FRONTEND', env('APP_URL_FRONTEND', 'http://unique.test'));
-define('APP_URL_BACKEND', env('APP_URL_BACKEND', 'http://unique.test/backend'));
+define('APP_URL_FRONTEND', env('APP_URL_FRONTEND', 'http://unqtalent.com'));
+define('APP_URL_BACKEND', env('APP_URL_BACKEND', 'http://unqtalent.com/backend'));
 
 // === CONFIGURACIÓN DE EMAIL ===
-define('EMAIL_SENDER', env('EMAIL_SENDER', 'info@unique.com'));
-define('EMAIL_RECIPIENT', env('EMAIL_RECIPIENT', 'info@unique.com'));
-define('EMAIL_BCC', env('EMAIL_BCC', 'admin@unique.com'));
-define('EMAIL_SENDER_SHOW', env('EMAIL_SENDER_SHOW', 'noreply@unique.com'));
+define('EMAIL_SENDER', env('EMAIL_SENDER', 'info@unqtalent.com'));
+define('EMAIL_RECIPIENT', env('EMAIL_RECIPIENT', 'asistente@unqtalent.com'));
+define('EMAIL_BCC', env('EMAIL_BCC', 'admin@unqtalent.com'));
 define('NAME_SENDER_SHOW', env('NAME_SENDER_SHOW', 'Unique Talent Solutions'));
 define('SMTP', env('SMTP', '0.0.0.0'));
 define('EMAIL_CLIENT', env('EMAIL_CLIENT', 'testuser'));
