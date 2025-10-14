@@ -28,7 +28,7 @@
 
 	    $sendClient = $app->sendEmail('Cliente', 'Contacto Cliente', $_POST);
 
-	    $sendUser = $app->sendEmail('Usuario', 'Contacto Usuario', $_POST);
+	    // $sendUser = $app->sendEmail('Usuario', 'Contacto Usuario', $_POST);
 
 	    if ($sendClient) {
         ?>
