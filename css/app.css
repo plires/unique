@@ -10,6 +10,13 @@ body {
   font-weight: 300;
 }
 
+p:has(> br:only-child) {
+  display: none;
+}
+p:empty {
+  display: none;
+}
+
 /* Variables */
 :root {
   --color-back: #f1e0d7;
